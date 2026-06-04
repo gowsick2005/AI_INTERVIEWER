@@ -1,0 +1,1834 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ResumeAI — Powered by AI · Built for Humans</title>
+<meta name="description" content="AI-powered resume intelligence. ATS score analysis, keyword matching, and AI rewrite suggestions in under 30 seconds.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+--bg:#050505;--bg2:#0f0f0f;--bg3:#1c1c1c;
+--border:#333333;--border2:#444444;
+--yellow:#FFEA00;--yellow2:#FFFF8D;
+--red:#FF3333;--red2:#FF8A80;
+--text:#FFFFFF;--text2:#D4D4D4;--text3:#A3A3A3;
+--sidebar:660px;--topbar:140px;
+--content-max:2600px;
+}
+html{font-size:20px;scroll-behavior:smooth;cursor:none}
+body{background:var(--bg);color:var(--text);font-family:'Syne',system-ui,sans-serif;min-height:100vh;overflow-x:hidden;cursor:none;user-select:none;-webkit-user-select:none;font-size:20px;line-height:1.6}
+body *{cursor:none}
+a,button{cursor:none}
+h1,h2,h3,h4,h5,h6{font-family:'Syne',sans-serif;color:var(--text)}
+.mono{font-family:'DM Mono',monospace}
+input,textarea,select{cursor:text}
+
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:var(--bg2)}
+::-webkit-scrollbar-thumb{background:#333;border-radius:2px}
+::-webkit-scrollbar-thumb:hover{background:var(--yellow)}
+
+:focus-visible{outline:2px solid var(--yellow);outline-offset:2px}
+
+#cursor-dot{position:fixed;width:8px;height:8px;background:var(--yellow);border-radius:50%;pointer-events:none;z-index:99999;transform:translate(-50%,-50%);transition:width .15s,height .15s}
+#cursor-ring{position:fixed;width:36px;height:36px;border:1.5px solid var(--yellow);border-radius:50%;pointer-events:none;z-index:99998;transform:translate(-50%,-50%);transition:width .2s,height .2s,background .2s;mix-blend-mode:difference}
+
+#app{width:100%;min-height:100vh}
+.page{display:none;animation:fadeIn .2s ease}
+.page.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+#splash-page{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;transition:opacity .5s ease,transform .5s ease}
+#splash-page.fade-out{opacity:0;transform:scale(1.04);pointer-events:none}
+.splash-logo-wrap{position:relative;width:180px;height:180px;margin-bottom:36px;display:flex;align-items:center;justify-content:center}
+.splash-svg{width:100%;height:100%;overflow:visible}
+.splash-svg .outer-rect{stroke:#FFD600;stroke-width:2;fill:none;stroke-dasharray:176;stroke-dashoffset:176}
+.splash-svg .inner-bolt{stroke:#FFD600;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:60;stroke-dashoffset:60}
+#scan-line{position:absolute;top:40%;left:-10%;width:0;height:4px;background:var(--yellow);box-shadow:0 0 12px var(--yellow);border-radius:2px}
+.splash-title{font-family:'Syne',sans-serif;font-size:64px;font-weight:800;color:var(--text);opacity:0;transform:translateY(24px);transition:opacity .5s ease,transform .5s ease;letter-spacing:-2px;margin-bottom:12px}
+.splash-tagline{font-size:24px;color:var(--text3);opacity:0;transition:opacity .5s ease .1s;margin-bottom:40px}
+.splash-dots{display:flex;gap:8px;opacity:0;transition:opacity .3s ease}
+.splash-dots span{width:8px;height:8px;background:var(--yellow);border-radius:50%;display:inline-block}
+@media(prefers-reduced-motion:no-preference){
+.splash-dots span:nth-child(1){animation:dotPulse 1s .0s infinite alternate}
+.splash-dots span:nth-child(2){animation:dotPulse 1s .2s infinite alternate}
+.splash-dots span:nth-child(3){animation:dotPulse 1s .4s infinite alternate}
+@keyframes dotPulse{from{opacity:1;transform:scale(1)}to{opacity:.2;transform:scale(.7)}}
+@keyframes svgDraw{to{stroke-dashoffset:0}}
+@keyframes scanAnim{0%{left:-10%;width:0}40%{width:120%}100%{left:110%;width:0;opacity:0}}
+@keyframes spin360{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+@keyframes spinArc{0%{stroke-dashoffset:120}50%{stroke-dashoffset:0}100%{stroke-dashoffset:-120}}
+@keyframes barFill{from{width:0}to{width:var(--target-w)}}
+@keyframes ringFill{from{stroke-dashoffset:var(--start-offset)}to{stroke-dashoffset:var(--end-offset)}}
+@keyframes countUp{from{opacity:0}to{opacity:1}}
+@keyframes pulsePing{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.15);opacity:.7}}
+}
+
+.split-layout{display:grid;grid-template-columns:45% 55%;min-height:100vh}
+.split-left{background:var(--bg2);position:relative;overflow:hidden;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;padding:56px 48px}
+.split-left::before{content:'';position:absolute;inset:0;background-image:repeating-linear-gradient(0deg,transparent,transparent 39px,rgba(255,214,0,.04) 39px,rgba(255,214,0,.04) 40px),repeating-linear-gradient(90deg,transparent,transparent 39px,rgba(255,214,0,.04) 39px,rgba(255,214,0,.04) 40px);pointer-events:none}
+.split-left-logo{display:flex;align-items:center;gap:10px;margin-bottom:48px}
+.split-left-logo svg{width:40px;height:40px}
+.split-left-logo-text{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--text)}
+.split-headline{font-family:'Syne',sans-serif;font-size:40px;font-weight:800;line-height:1.1;color:var(--text);margin-bottom:16px;letter-spacing:-1px}
+.split-headline span{color:var(--yellow)}
+.split-sub{font-size:15px;color:var(--text2);margin-bottom:36px;line-height:1.7}
+.split-bullets{display:flex;flex-direction:column;gap:14px;margin-bottom:48px}
+.split-bullet{display:flex;align-items:center;gap:12px;font-size:14px;color:var(--text2)}
+.split-bullet i{color:var(--yellow);font-size:18px;flex-shrink:0}
+.split-stats{display:flex;gap:12px;flex-wrap:wrap}
+.stat-chip{background:rgba(255,214,0,.06);border:1px solid rgba(255,214,0,.15);border-radius:8px;padding:8px 14px;font-family:'DM Mono',monospace;font-size:12px;color:var(--yellow2);white-space:nowrap}
+.split-right{background:var(--bg);display:flex;flex-direction:column;justify-content:center;align-items:center;padding:48px 32px;min-height:100vh;overflow-y:auto}
+.auth-inner{width:100%;max-width:800px}
+.auth-logo{display:flex;align-items:center;gap:16px;margin-bottom:48px}
+.auth-logo i{font-size:64px;color:var(--yellow)}
+.auth-logo-text{font-family:'Syne',sans-serif;font-size:36px;font-weight:800}
+.auth-h1{font-family:'Syne',sans-serif;font-size:52px;font-weight:800;color:var(--text);margin-bottom:16px;letter-spacing:-1px}
+.auth-sub{font-size:24px;color:var(--text3);margin-bottom:48px}
+.sso-btn{width:100%;height:80px;background:#1a1a1a;border:1px solid rgba(255,255,255,.3);border-radius:16px;display:flex;align-items:center;justify-content:center;gap:20px;font-size:28px;font-weight:600;color:#ffffff;transition:background .2s,border-color .2s,transform .2s;margin-bottom:36px}
+.sso-btn:hover{background:#222;border-color:rgba(255,255,255,.6);transform:translateY(-2px)}
+.sso-btn svg{width:36px;height:36px;flex-shrink:0}
+.auth-divider{display:flex;align-items:center;gap:20px;color:var(--text3);font-size:20px;margin-bottom:36px}
+.auth-divider::before,.auth-divider::after{content:'';flex:1;height:1px;background:var(--border)}
+.form-group{margin-bottom:48px}
+.form-label{display:block;font-size:32px;font-weight:600;color:var(--text2);margin-bottom:20px;letter-spacing:.01em}
+.input-wrap{position:relative}
+.input-wrap i{position:absolute;left:32px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:40px;pointer-events:none;z-index:1}
+.input-wrap .eye-btn{left:auto;right:32px;pointer-events:all;cursor:none;color:var(--text3);font-size:40px;transition:color .2s}
+.input-wrap .eye-btn:hover{color:var(--text2)}
+.form-input{width:100%;height:100px;background:var(--bg2);border:1px solid var(--border);border-radius:24px;padding:0 32px 0 92px;color:var(--text);font-size:32px;font-family:'Syne',sans-serif;transition:border-color .2s;-webkit-appearance:none}
+.form-input:focus{border-color:var(--yellow);outline:none}
+.form-input.error{border-color:var(--red)}
+.form-input::placeholder{color:var(--text3)}
+.strength-wrap{margin-top:8px}
+.strength-bar{display:flex;gap:3px;height:3px}
+.strength-seg{flex:1;height:100%;background:var(--border);border-radius:2px;transition:background .3s}
+.field-err{font-size:12px;color:var(--red2);margin-top:4px}
+.forgot-link{display:block;text-align:right;font-size:13px;color:var(--yellow2);margin-top:6px;text-decoration:none}
+.forgot-link:hover{text-decoration:underline}
+.btn-primary{width:100%;height:100px;background:var(--yellow);color:#0a0a0a;font-family:'Syne',sans-serif;font-size:36px;font-weight:700;border:none;border-radius:24px;display:flex;align-items:center;justify-content:center;gap:20px;transition:filter .2s,transform .15s,opacity .2s;letter-spacing:.02em;margin-top:20px}
+.btn-primary:hover{filter:brightness(1.1);transform:translateY(-3px)}
+.btn-primary:active{transform:scale(.98)}
+.btn-primary:disabled{opacity:.4;filter:none;transform:none}
+.btn-outline{height:84px;padding:0 48px;background:transparent;border:1px solid var(--border2);border-radius:24px;color:var(--text2);font-family:'Syne',sans-serif;font-size:28px;font-weight:600;display:inline-flex;align-items:center;gap:20px;transition:border-color .2s,color .2s,transform .15s}
+.btn-outline:hover{border-color:var(--yellow);color:var(--yellow);transform:translateY(-3px)}
+.btn-ghost{height:84px;padding:0 48px;background:transparent;border:1px solid var(--border);border-radius:24px;color:var(--text2);font-family:'Syne',sans-serif;font-size:28px;font-weight:600;display:inline-flex;align-items:center;gap:20px;transition:border-color .2s,color .2s,background .2s}
+.btn-ghost:hover{border-color:var(--border2);color:var(--text);background:var(--bg3)}
+.auth-footer{text-align:center;font-size:13px;color:var(--text3);margin-top:20px}
+.auth-footer a,.auth-footer span{color:var(--yellow2);font-weight:600;text-decoration:none}
+.trust-row{display:flex;justify-content:center;gap:16px;font-size:12px;color:var(--text3);margin-top:16px}
+.error-banner{background:rgba(211,47,47,.1);border:1px solid var(--red);border-radius:8px;padding:12px 16px;font-size:13px;color:var(--red2);margin-bottom:16px;display:none}
+.error-banner.show{display:block}
+
+.app-shell{display:flex;width:100%;min-height:100vh;position:relative}
+.sidebar{width:var(--sidebar);height:100vh;background:#0d0d0d;border-right:1px solid #1e1e1e;display:flex;flex-direction:column;justify-content:space-between;position:fixed;left:0;top:0;z-index:200;transition:transform .3s cubic-bezier(.16,1,.3,1)}
+.sidebar-top{padding:24px 16px;flex:1;overflow-y:auto}
+.sidebar-logo{display:flex;align-items:center;gap:24px;margin-bottom:80px;padding:0 16px}
+.sidebar-logo i{font-size:80px;color:var(--yellow)}
+.sidebar-logo-text{font-family:'Syne',sans-serif;font-size:52px;font-weight:800;color:var(--text)}
+.nav-list{list-style:none;display:flex;flex-direction:column;gap:16px}
+.nav-item button{width:100%;height:100px;display:flex;align-items:center;gap:32px;padding:0 40px;color:var(--text3);font-family:'Syne',sans-serif;font-size:32px;font-weight:600;border-radius:24px;border:none;background:none;border-left:8px solid transparent;transition:background .15s,color .15s;text-align:left}
+.nav-item button:hover{background:var(--bg3);color:var(--text2)}
+.nav-item button i{font-size:48px;flex-shrink:0;transition:color .15s}
+.nav-item.active button{background:#1a1a00;color:var(--yellow);border-left-color:var(--yellow)}
+.nav-item.active button i{color:var(--yellow)}
+.sidebar-bottom{padding:48px;border-top:1px solid #1e1e1e}
+.user-row{display:flex;align-items:center;gap:24px}
+.user-avatar{width:100px;height:100px;background:var(--yellow);color:#0a0a0a;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:40px;flex-shrink:0}
+.user-info{flex:1;min-width:0}
+.user-name{font-size:32px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.user-email{font-size:24px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.logout-btn{color:var(--text3);background:none;border:none;font-size:48px;padding:16px;transition:color .2s;flex-shrink:0}
+.logout-btn:hover{color:var(--red2)}
+
+.main-area{margin-left:var(--sidebar);min-height:100vh;display:flex;flex-direction:column;width:calc(100% - var(--sidebar));box-sizing:border-box}
+.topbar{height:140px;background:#0a0a0a;border-bottom:1px solid #1a1a1a;display:flex;align-items:center;justify-content:space-between;padding:0 80px;position:sticky;top:0;z-index:100}
+.topbar-left{display:flex;align-items:center;gap:40px}
+.topbar-page-title{font-family:'Syne',sans-serif;font-size:56px;font-weight:700;color:var(--text)}
+.topbar-right{display:flex;align-items:center;gap:48px}
+.search-wrap{position:relative}
+.search-wrap i{position:absolute;left:28px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:36px;pointer-events:none}
+.search-input{height:80px;background:var(--bg2);border:1px solid var(--border);border-radius:24px;padding:0 28px 0 84px;color:var(--text);font-size:28px;width:500px;transition:border-color .2s,width .3s}
+.search-input:focus{border-color:var(--yellow);outline:none;width:600px}
+.search-input::placeholder{color:var(--text3)}
+.notif-btn{position:relative;background:none;border:none;color:var(--text3);font-size:56px;padding:16px;transition:color .2s}
+.notif-btn:hover{color:var(--text2)}
+.notif-dot{position:absolute;top:12px;right:12px;width:20px;height:20px;background:var(--red);border-radius:50%;border:4px solid #0a0a0a}
+.topbar-avatar{width:100px;height:100px;background:var(--yellow);color:#0a0a0a;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:40px;position:relative}
+.user-dropdown{position:absolute;top:120px;right:0;width:360px;background:var(--bg3);border:1px solid var(--border2);border-radius:24px;padding:24px 0;display:none;flex-direction:column;z-index:300;box-shadow:0 20px 60px rgba(0,0,0,.6)}
+.user-dropdown.open{display:flex}
+.dropdown-item{padding:32px 48px;font-size:32px;color:var(--text2);background:none;border:none;text-align:left;transition:background .15s,color .15s;width:100%}
+.dropdown-item:hover{background:var(--bg2);color:var(--yellow)}
+
+.content-body{flex:1;padding:80px 40px;width:100%;max-width:var(--content-max);margin:0 auto;box-sizing:border-box}
+
+.mobile-topbar{display:none;height:56px;background:#0d0d0d;border-bottom:1px solid #1e1e1e;align-items:center;justify-content:space-between;padding:0 16px;position:fixed;top:0;left:0;right:0;z-index:200}
+.mobile-logo{display:flex;align-items:center;gap:8px}
+.mobile-logo i{font-size:24px;color:var(--yellow)}
+.mobile-logo-text{font-family:'Syne',sans-serif;font-size:16px;font-weight:800}
+.hamburger-btn{background:none;border:none;color:var(--text2);font-size:22px;padding:4px}
+.sidebar-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:190;display:none;backdrop-filter:blur(2px)}
+.sidebar-overlay.show{display:block}
+.bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;height:60px;background:#0d0d0d;border-top:1px solid #1e1e1e;z-index:200;flex-direction:row;align-items:stretch}
+.bnav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;background:none;border:none;color:var(--text3);font-size:10px;font-family:'Syne',sans-serif;font-weight:600;transition:color .15s;padding:4px 0}
+.bnav-item i{font-size:20px}
+.bnav-item.active{color:var(--yellow)}
+
+.card{background:var(--bg2);border:1px solid #1e1e1e;border-radius:40px;padding:80px 100px}
+.card-title{font-family:'Syne',sans-serif;font-size:52px;font-weight:700;color:var(--text);margin-bottom:60px}
+.card.bordered-yellow{border-left:12px solid var(--yellow)}
+
+.page-header{margin-bottom:80px}
+.page-h1{font-family:'Syne',sans-serif;font-size:80px;font-weight:800;color:var(--text);letter-spacing:-2px;margin-bottom:24px}
+.page-sub{font-size:36px;color:var(--text2)}
+
+.dropzone{min-height:600px;border:4px dashed var(--border2);border-radius:40px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:40px;padding:120px 80px;transition:border-color .2s,background .2s;position:relative}
+.dropzone:hover,.dropzone.drag-over{border-color:var(--yellow);background:rgba(255,214,0,.03)}
+.dropzone.selected{border-color:var(--yellow);border-style:solid}
+.dropzone-icon{font-size:200px;color:var(--yellow);transition:transform .2s}
+.dropzone.drag-over .dropzone-icon{transform:scale(1.1)}
+.dropzone-title{font-family:'Syne',sans-serif;font-size:52px;font-weight:700}
+.dropzone-sub{font-size:32px;color:var(--text3)}
+.dz-selected-info{display:flex;flex-direction:column;align-items:center;gap:20px}
+.dz-file-name{font-size:44px;font-weight:700}
+.dz-file-size{font-size:32px;color:var(--text3)}
+.dz-change-btn{font-size:32px;color:var(--yellow);background:none;border:none;text-decoration:underline;margin-top:16px}
+.optional-badge{display:inline-block;font-size:28px;font-weight:600;color:var(--text3);border:1px solid var(--border);border-radius:24px;padding:8px 20px;font-family:'DM Mono',monospace;vertical-align:middle;margin-left:20px}
+.jd-textarea{width:100%;height:320px;background:var(--bg2);border:1px solid var(--border);border-radius:32px;padding:40px;color:var(--text);font-size:32px;font-family:'Syne',sans-serif;resize:none;transition:border-color .2s;line-height:1.6}
+.jd-textarea:focus{border-color:var(--yellow);outline:none}
+.jd-textarea::placeholder{color:var(--text3);font-size:32px}
+.jd-helper{font-size:28px;color:var(--text3);margin-top:24px}
+.checkbox-grid{display:grid;grid-template-columns:1fr 1fr;gap:36px;margin-top:40px}
+.check-label{display:flex;align-items:center;gap:32px;font-size:32px;color:var(--text2);padding:40px 52px;background:var(--bg3);border:1px solid var(--border);border-radius:24px;transition:border-color .2s,background .2s}
+.check-label:hover{border-color:var(--border2);background:#1e1e1e}
+.check-label input[type=checkbox]{appearance:none;width:48px;height:48px;border:4px solid var(--border2);border-radius:12px;flex-shrink:0;transition:background .15s,border-color .15s;position:relative}
+.check-label input[type=checkbox]:checked{background:var(--yellow);border-color:var(--yellow)}
+.check-label input[type=checkbox]:checked::after{content:'';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:no-repeat center/32px url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2 6l3 3 5-5' stroke='%230a0a0a' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")}
+.usage-bar-wrap{margin-top:32px}
+.usage-label{font-size:28px;color:var(--text3);margin-bottom:20px}
+.usage-bar-bg{height:16px;background:var(--border);border-radius:8px;overflow:hidden}
+.usage-bar-fill{height:100%;background:var(--yellow);border-radius:8px;transition:width .6s ease}
+.start-btn{width:100%;height:120px;background:var(--yellow);color:#0a0a0a;font-family:'Syne',sans-serif;font-size:44px;font-weight:800;border:none;border-radius:32px;display:flex;align-items:center;justify-content:center;gap:24px;letter-spacing:.02em;transition:filter .2s,transform .15s,opacity .2s;box-shadow:0 12px 40px rgba(255,214,0,.2)}
+.start-btn:hover:not(:disabled){filter:brightness(1.08);transform:translateY(-4px);box-shadow:0 20px 56px rgba(255,214,0,.3)}
+.start-btn:active:not(:disabled){transform:scale(.98)}
+.start-btn:disabled{opacity:.3;box-shadow:none}
+
+.analysis-wrap{display:flex;flex-direction:column;align-items:center;padding:160px 80px;max-width:1400px;margin:0 auto;width:100%}
+.analysis-graphic{position:relative;width:500px;height:500px;display:flex;align-items:center;justify-content:center;margin-bottom:100px}
+.analysis-svg{width:100%;height:100%;transform:rotate(-90deg);position:absolute;inset:0}
+.analysis-svg circle{fill:none;stroke-width:24}
+.arc-bg{stroke:var(--border)}
+.arc-fill{stroke:var(--yellow);stroke-linecap:round;stroke-dasharray:1492;stroke-dashoffset:1492;transition:stroke-dashoffset .4s ease}
+.analysis-icon-center{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:32px}
+.analysis-icon-center i{font-size:140px;color:var(--yellow)}
+.analysis-pct{font-family:'DM Mono',monospace;font-size:80px;font-weight:500;color:var(--yellow)}
+.analysis-h2{font-family:'Syne',sans-serif;font-size:72px;font-weight:800;margin-bottom:24px;text-align:center}
+.analysis-sub-text{font-size:40px;color:var(--text2);text-align:center;margin-bottom:80px}
+.stages-list{width:100%;display:flex;flex-direction:column;gap:32px}
+.stage-item{display:flex;align-items:center;gap:40px;padding:48px 60px;border:1px solid var(--border);border-radius:24px;background:var(--bg2);transition:border-color .3s,background .3s}
+.stage-item.active{border-color:var(--yellow);background:rgba(255,234,0,.08)}
+.stage-item.done{border-color:#5bd615;background:rgba(91,214,21,.1)}
+.stage-icon{width:80px;height:80px;border-radius:50%;border:4px solid var(--text3);display:flex;align-items:center;justify-content:center;font-size:40px;flex-shrink:0;transition:all .3s}
+.stage-item.active .stage-icon{border-color:var(--yellow);color:var(--yellow)}
+.stage-item.done .stage-icon{border-color:#5bd615;background:#0a1f0a;color:#5bd615}
+.stage-name{flex:1;font-size:40px;font-weight:600;color:var(--text3);transition:color .3s}
+.stage-item.active .stage-name{color:var(--text)}
+.stage-item.done .stage-name{color:#5bd615}
+.stage-status{font-size:32px;font-family:'DM Mono',monospace;font-weight:500;color:var(--text3)}
+.stage-item.active .stage-status{color:var(--yellow)}
+.stage-item.done .stage-status{color:#5bd615}
+@media(prefers-reduced-motion:no-preference){
+.stage-item.active .stage-icon{animation:pulsePing 1.4s infinite}
+}
+
+.results-page{display:flex;flex-direction:column;gap:60px}
+.hero-score-card{background:var(--bg2);border:1px solid #1e1e1e;border-left:12px solid var(--yellow);border-radius:40px;padding:80px 100px;display:flex;align-items:center;justify-content:space-between;gap:80px}
+.hero-left{flex:1}
+.hero-score-label{font-size:32px;font-weight:700;letter-spacing:.1em;color:var(--text3);text-transform:uppercase;margin-bottom:20px}
+.hero-filename{font-family:'Syne',sans-serif;font-size:64px;font-weight:700;margin-bottom:32px}
+.hero-role-pill{display:inline-flex;align-items:center;gap:16px;border:1px solid var(--border2);border-radius:40px;padding:16px 32px;font-size:28px;font-weight:600;color:var(--text2);margin-bottom:40px}
+.status-pills{display:flex;flex-wrap:wrap;gap:20px}
+.status-pill{display:inline-flex;align-items:center;gap:16px;padding:16px 32px;border-radius:40px;font-size:28px;font-weight:700;font-family:'DM Mono',monospace}
+.status-pill.green{background:rgba(91,214,21,.15);color:#5bd615;border:1px solid #5bd615}
+.status-pill.red{background:rgba(255,51,51,.15);color:var(--red);border:1px solid var(--red)}
+.status-pill.yellow{background:rgba(255,234,0,.15);color:var(--yellow);border:1px solid var(--yellow)}
+.score-ring-wrap{position:relative;width:400px;height:400px;flex-shrink:0}
+.score-ring-svg{width:100%;height:100%;transform:rotate(-90deg)}
+.score-ring-svg circle{fill:none;stroke-width:24}
+.score-ring-bg{stroke:#1e1e1e}
+.score-ring-fill{stroke-linecap:round;stroke-dasharray:1193;transition:stroke-dashoffset 1.5s cubic-bezier(.16,1,.3,1)}
+.score-ring-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px}
+.score-num{font-family:'DM Mono',monospace;font-size:140px;font-weight:500;line-height:1}
+.score-denom{font-size:48px;color:var(--text3)}
+.results-grid{display:grid;grid-template-columns:60% 40%;gap:60px}
+.metric-row{margin-bottom:48px}
+.metric-row:last-child{margin-bottom:0}
+.metric-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;font-size:36px;color:var(--text2);font-weight:500}
+.metric-val{font-family:'DM Mono',monospace;font-weight:600;color:var(--text);font-size:36px}
+.metric-bar-bg{height:24px;background:var(--bg3);border-radius:12px;overflow:hidden}
+.metric-bar-fill{height:100%;border-radius:12px;transition:width 1s cubic-bezier(.16,1,.3,1)}
+.metric-bar-fill.red{background:var(--red)}
+.metric-bar-fill.yellow{background:var(--yellow)}
+.metric-bar-fill.green{background:#5bd615}
+.results-tabs{display:flex;border-bottom:4px solid var(--border);gap:0;margin-bottom:60px}
+.results-tab{background:none;border:none;color:var(--text3);font-family:'Syne',sans-serif;font-size:36px;font-weight:600;padding:32px 64px;position:relative;transition:color .2s}
+.results-tab:hover{color:var(--text2)}
+.results-tab.active{color:var(--yellow)}
+.results-tab.active::after{content:'';position:absolute;bottom:-4px;left:0;right:0;height:8px;background:var(--yellow);border-radius:4px 4px 0 0}
+.tab-panel{display:none}
+.tab-panel.active{display:block}
+.issue-item{display:flex;gap:40px;padding:48px 60px;border:1px solid var(--border);border-radius:32px;margin-bottom:32px;background:var(--bg2)}
+.issue-item.critical{border-left:8px solid var(--red);background:rgba(255,51,51,.05)}
+.issue-item.warning{border-left:8px solid var(--yellow);background:rgba(255,234,0,.05)}
+.issue-item.pass{border-left:8px solid #5bd615;background:rgba(91,214,21,.05)}
+.issue-icon{flex-shrink:0;margin-top:8px}
+.issue-icon.critical{color:var(--red)}
+.issue-icon.warning{color:var(--yellow)}
+.issue-icon.pass{color:#5bd615}
+.issue-icon i{font-size:56px}
+.issue-content{flex:1}
+.issue-title{font-size:40px;font-weight:700;margin-bottom:16px}
+.issue-desc{font-size:32px;color:var(--text2);line-height:1.65}
+.kw-counter{font-family:'DM Mono',monospace;font-size:56px;font-weight:500;margin-bottom:32px}
+.kw-counter span{font-size:36px;color:var(--text3);font-weight:400}
+.kw-group-label{font-size:28px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:24px;margin-top:40px}
+.kw-pills{display:flex;flex-wrap:wrap;gap:20px}
+.kw-pill{padding:16px 32px;border-radius:24px;font-size:28px;font-weight:600;font-family:'DM Mono',monospace}
+.kw-pill.found{background:#0a1400;border:1px solid #2a4a00;color:#5bd615}
+.kw-pill.missing{background:#1a0800;border:1px solid #4a2000;color:#ff7043}
+.quick-actions{display:flex;flex-direction:column;gap:28px}
+.sugg-item{padding:48px 60px;border:1px solid var(--border);border-radius:32px;background:var(--bg2);margin-bottom:28px}
+.sugg-num{font-family:'DM Mono',monospace;font-size:28px;color:var(--text3);margin-bottom:20px}
+.sugg-title{font-size:40px;font-weight:700;margin-bottom:20px}
+.sugg-desc{font-size:32px;color:var(--text2);line-height:1.65}
+.rewrite-box{border:1px solid var(--border);border-radius:32px;overflow:hidden;margin-bottom:40px}
+.rewrite-header{background:var(--bg3);padding:32px 52px;font-size:36px;font-weight:700;display:flex;align-items:center;gap:24px;border-bottom:1px solid var(--border)}
+.rewrite-header i{color:var(--yellow);font-size:48px}
+.rewrite-body{padding:52px;font-size:32px;color:var(--text2);line-height:1.75}
+.rewrite-actions{display:flex;gap:24px;padding:0 52px 52px}
+.rewrite-btn{height:80px;padding:0 48px;background:var(--bg3);border:1px solid var(--border2);border-radius:24px;color:var(--text2);font-size:32px;font-weight:600;transition:border-color .2s,color .2s}
+.rewrite-btn:hover{border-color:var(--yellow);color:var(--yellow)}
+
+.feedback-wrap{width:100%}
+.emoji-row{display:flex;flex-wrap:wrap;gap:40px;margin-bottom:80px}
+.emoji-btn{width:200px;height:200px;flex-shrink:0;border-radius:40px;border:6px solid var(--border);background:none;font-size:100px;display:flex;align-items:center;justify-content:center;transition:border-color .2s,transform .15s,background .2s}
+.emoji-btn:hover{border-color:var(--border2);transform:scale(1.05)}
+.emoji-btn.selected{border-color:var(--yellow);background:rgba(255,234,0,.08);transform:scale(1.1)}
+.pill-tags{display:flex;flex-wrap:wrap;gap:28px;margin-bottom:64px}
+.pill-tag{padding:24px 48px;border:1px solid var(--border);border-radius:48px;background:var(--bg3);color:var(--text2);font-size:36px;font-weight:600;transition:background .2s,color .2s,border-color .2s}
+.pill-tag:hover{border-color:var(--border2);color:var(--text)}
+.pill-tag.selected{background:var(--yellow);color:#0a0a0a;border-color:var(--yellow)}
+.feedback-success{text-align:center;padding:160px 32px;animation:fadeIn .4s ease}
+.feedback-success i{font-size:200px;color:#5bd615;display:block;margin-bottom:48px}
+.feedback-success h2{font-size:72px;margin-bottom:28px}
+.feedback-success p{color:var(--text2);font-size:40px}
+
+.history-wrap{}
+.history-topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:64px}
+.filter-row{display:flex;align-items:center;gap:32px;margin-bottom:48px;flex-wrap:wrap}
+.filter-tabs{display:flex;background:var(--bg2);border:1px solid var(--border);border-radius:24px;padding:16px;gap:12px}
+.filter-tab{background:none;border:none;color:var(--text3);font-size:32px;font-weight:600;padding:24px 48px;border-radius:20px;transition:background .15s,color .15s}
+.filter-tab:hover{color:var(--text2)}
+.filter-tab.active{background:var(--bg3);color:var(--yellow)}
+.history-search{height:84px;background:var(--bg2);border:1px solid var(--border);border-radius:24px;padding:0 36px 0 84px;color:var(--text);font-size:32px;width:560px;transition:border-color .2s}
+.history-search:focus{border-color:var(--yellow);outline:none}
+.history-search::placeholder{color:var(--text3)}
+.history-table-wrap{border:1px solid var(--border);border-radius:32px;overflow:hidden;overflow-x:auto}
+.history-table{width:100%;border-collapse:collapse;min-width:1200px}
+.history-table th{background:var(--bg3);padding:40px 48px;text-align:left;font-size:28px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);border-bottom:1px solid var(--border)}
+.history-table td{padding:48px 48px;border-bottom:1px solid var(--border);font-size:36px;vertical-align:middle}
+.history-table tr:last-child td{border-bottom:none}
+.history-table tr:hover td{background:rgba(255,255,255,.015)}
+.score-badge{display:inline-block;padding:16px 36px;border-radius:20px;font-family:'DM Mono',monospace;font-size:36px;font-weight:600}
+.score-badge.red{background:rgba(255,51,51,.12);color:var(--red)}
+.score-badge.yellow{background:rgba(255,234,0,.1);color:var(--yellow)}
+.score-badge.green{background:rgba(91,214,21,.1);color:#5bd615}
+.table-actions{display:flex;gap:24px}
+.tbl-btn{height:80px;padding:0 40px;border-radius:20px;font-size:28px;font-weight:600;background:none;border:1px solid var(--border);color:var(--text2);transition:border-color .15s,color .15s}
+.tbl-btn:hover{border-color:var(--yellow);color:var(--yellow)}
+.empty-state{text-align:center;padding:200px 40px;color:var(--text3)}
+.empty-state i{font-size:140px;margin-bottom:40px;display:block}
+.empty-state p{font-size:44px}
+
+.settings-wrap{width:100%}
+.settings-section{margin-bottom:100px}
+.settings-section-title{font-family:'Syne',sans-serif;font-size:48px;font-weight:700;color:var(--text);margin-bottom:48px;padding-bottom:24px;border-bottom:1px solid var(--border)}
+.settings-row{display:flex;align-items:center;justify-content:space-between;padding:48px 0;border-bottom:1px solid var(--border)}
+.settings-row:last-child{border-bottom:none}
+.settings-row-label{font-size:40px;color:var(--text)}
+.settings-row-sub{font-size:32px;color:var(--text3);margin-top:12px}
+.toggle{position:relative;width:120px;height:64px}
+.toggle input{opacity:0;width:0;height:0}
+.toggle-slider{position:absolute;inset:0;background:var(--border2);border-radius:32px;transition:background .2s}
+.toggle-slider::before{content:'';position:absolute;width:52px;height:52px;left:6px;top:6px;background:#fff;border-radius:50%;transition:transform .2s}
+.toggle input:checked + .toggle-slider{background:var(--yellow)}
+.toggle input:checked + .toggle-slider::before{transform:translateX(56px)}
+.danger-btn{height:84px;padding:0 48px;background:rgba(255,51,51,.1);border:1px solid var(--red);border-radius:24px;color:var(--red);font-size:32px;font-weight:600;font-family:'Syne',sans-serif;transition:background .2s,transform .15s}
+.danger-btn:hover{background:rgba(255,51,51,.2);transform:translateY(-3px)}
+
+@media(max-width:1023px){
+:root{--sidebar:72px}
+.sidebar-logo-text,.nav-item button span,.user-info,.logout-btn{display:none}
+.sidebar-logo{justify-content:center;padding:0}
+.nav-item button{justify-content:center;padding:0;border-left:none;border-bottom:3px solid transparent}
+.nav-item button i{font-size:28px}
+.nav-item.active button{border-bottom-color:var(--yellow);border-left:none}
+.sidebar-bottom{justify-content:center}
+.user-row{justify-content:center}
+}
+@media(max-width:767px){
+.split-left{display:none}
+.split-layout{grid-template-columns:1fr}
+.split-right{padding:36px 24px;min-height:100svh}
+.topbar,.sidebar{display:none}
+.mobile-topbar{display:flex}
+.bottom-nav{display:flex}
+.main-area{margin-left:0;width:100%}
+.content-body{padding:76px 20px 88px}
+.results-grid{grid-template-columns:1fr}
+.checkbox-grid{grid-template-columns:1fr}
+.hero-score-card{flex-direction:column;text-align:center;padding:24px 20px}
+.status-pills{justify-content:center}
+.hero-left{width:100%}
+.score-ring-wrap{width:150px;height:150px}
+.emoji-row{justify-content:center}
+.filter-row{flex-direction:column;align-items:flex-start}
+.history-search{width:100%}
+.quick-actions{flex-direction:column}
+.page-h1{font-size:28px}
+.card{padding:22px 20px}
+.start-btn{height:56px;font-size:17px}
+}
+@media(min-width:768px) and (max-width:1023px){
+.main-area{margin-left:72px;width:calc(100% - 72px)}
+}
+</style>
+</head>
+<body>
+
+<div id="cursor-dot"></div>
+<div id="cursor-ring"></div>
+
+<div id="splash-page">
+  <div class="splash-logo-wrap">
+    <svg class="splash-svg" viewBox="0 0 60 60">
+      <rect class="outer-rect" x="8" y="8" width="44" height="44" rx="10"/>
+      <path class="inner-bolt" d="M20 36 L32 24 L28 24 L40 16"/>
+    </svg>
+    <div id="scan-line"></div>
+  </div>
+  <div class="splash-title" id="splash-title">ResumeAI</div>
+  <div class="splash-tagline" id="splash-tagline">Powered by AI · Built for humans</div>
+  <div class="splash-dots" id="splash-dots">
+    <span></span><span></span><span></span>
+  </div>
+</div>
+
+<div id="app">
+
+  <div id="page-signup" class="page">
+    <div class="split-layout">
+      <div class="split-left">
+        <div class="split-left-logo">
+          <svg viewBox="0 0 60 60" fill="none"><rect x="8" y="8" width="44" height="44" rx="10" stroke="#FFD600" stroke-width="2"/><path d="M20 36 L32 24 L28 24 L40 16" stroke="#FFD600" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span class="split-left-logo-text">ResumeAI</span>
+        </div>
+        <h2 class="split-headline">Land your <span>dream job</span></h2>
+        <p class="split-sub">AI-powered resume intelligence for the modern job seeker. Beat the bots, impress the humans.</p>
+        <div class="split-bullets">
+          <div class="split-bullet"><i class="ti ti-circle-check"></i><span>ATS score analysis in under 30 seconds</span></div>
+          <div class="split-bullet"><i class="ti ti-circle-check"></i><span>Keyword gap detection vs job descriptions</span></div>
+          <div class="split-bullet"><i class="ti ti-circle-check"></i><span>AI rewrite suggestions for every section</span></div>
+        </div>
+        <div class="split-stats">
+          <span class="stat-chip">50K+ Resumes</span>
+          <span class="stat-chip">94% ATS Pass Rate</span>
+          <span class="stat-chip">4.9★ Rating</span>
+        </div>
+      </div>
+      <div class="split-right">
+        <div class="auth-inner">
+          <div class="auth-logo"><i class="ti ti-bolt"></i><span class="auth-logo-text">ResumeAI</span></div>
+          <h1 class="auth-h1">Create your account</h1>
+          <p class="auth-sub">Free forever · No credit card</p>
+          <button class="sso-btn" id="sso-signup-btn" onclick="handleSSO()">
+            <svg viewBox="0 0 24 24"><path fill="#EA4335" d="M12.24 10.285V14.4h6.887c-.275 1.565-1.88 4.604-6.887 4.604-4.33 0-7.859-3.579-7.859-7.98 0-4.4 3.53-7.979 7.86-7.979 2.47 0 4.12 1.025 5.06 1.926l3.245-3.121C18.3 1.92 15.54 1 12.24 1 6.033 1 1 6.033 1 12.24s5.033 11.24 11.24 11.24c6.478 0 10.793-4.537 10.793-10.977 0-.74-.08-1.305-.175-1.926l-10.618-.302z"/></svg>
+            <span>Continue with Google</span>
+          </button>
+          <div class="auth-divider">or sign up with email</div>
+          <form id="signup-form" onsubmit="handleSignup(event)">
+            <div class="form-group">
+              <label class="form-label">Full Name</label>
+              <div class="input-wrap">
+                <i class="ti ti-user"></i>
+                <input type="text" class="form-input" id="signup-name" placeholder="John Doe" required autocomplete="name">
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Email Address</label>
+              <div class="input-wrap">
+                <i class="ti ti-mail"></i>
+                <input type="email" class="form-input" id="signup-email" placeholder="you@email.com" required autocomplete="email">
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Password</label>
+              <div class="input-wrap">
+                <i class="ti ti-lock"></i>
+                <input type="password" class="form-input" id="signup-pass" placeholder="••••••••" required autocomplete="new-password" oninput="updateStrength(this.value)">
+                <i class="ti ti-eye eye-btn" id="signup-eye" onclick="toggleEye('signup-pass','signup-eye')"></i>
+              </div>
+              <div class="strength-wrap">
+                <div class="strength-bar">
+                  <div class="strength-seg" id="seg1"></div>
+                  <div class="strength-seg" id="seg2"></div>
+                  <div class="strength-seg" id="seg3"></div>
+                  <div class="strength-seg" id="seg4"></div>
+                </div>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Confirm Password</label>
+              <div class="input-wrap">
+                <i class="ti ti-lock"></i>
+                <input type="password" class="form-input" id="signup-confirm" placeholder="••••••••" required autocomplete="new-password">
+                <i class="ti ti-eye eye-btn" id="confirm-eye" onclick="toggleEye('signup-confirm','confirm-eye')"></i>
+              </div>
+              <div class="field-err" id="confirm-err" style="display:none">Passwords do not match</div>
+            </div>
+            <button type="submit" class="btn-primary">Create Free Account →</button>
+          </form>
+          <div class="auth-footer">Already have an account? <span onclick="navigate('login')" style="color:var(--yellow2);font-weight:700;cursor:none">Sign in</span></div>
+          <div class="trust-row"><span>🔒 Secure</span><span>⚡ Instant</span><span>✅ Free plan</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="page-login" class="page">
+    <div class="split-layout">
+      <div class="split-left">
+        <div class="split-left-logo">
+          <svg viewBox="0 0 60 60" fill="none"><rect x="8" y="8" width="44" height="44" rx="10" stroke="#FFD600" stroke-width="2"/><path d="M20 36 L32 24 L28 24 L40 16" stroke="#FFD600" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span class="split-left-logo-text">ResumeAI</span>
+        </div>
+        <h2 class="split-headline">Land your <span>dream job</span></h2>
+        <p class="split-sub">AI-powered resume intelligence for the modern job seeker. Beat the bots, impress the humans.</p>
+        <div class="split-bullets">
+          <div class="split-bullet"><i class="ti ti-circle-check"></i><span>ATS score analysis in under 30 seconds</span></div>
+          <div class="split-bullet"><i class="ti ti-circle-check"></i><span>Keyword gap detection vs job descriptions</span></div>
+          <div class="split-bullet"><i class="ti ti-circle-check"></i><span>AI rewrite suggestions for every section</span></div>
+        </div>
+        <div class="split-stats">
+          <span class="stat-chip">50K+ Resumes</span>
+          <span class="stat-chip">94% ATS Pass Rate</span>
+          <span class="stat-chip">4.9★ Rating</span>
+        </div>
+      </div>
+      <div class="split-right">
+        <div class="auth-inner">
+          <div class="auth-logo"><i class="ti ti-bolt"></i><span class="auth-logo-text">ResumeAI</span></div>
+          <h1 class="auth-h1">Welcome back</h1>
+          <p class="auth-sub">Sign in to your dashboard</p>
+          <div class="error-banner" id="login-error">Invalid credentials. Use demo@resumeai.com / demopass123</div>
+          <form id="login-form" onsubmit="handleLogin(event)">
+            <div class="form-group">
+              <label class="form-label">Email Address</label>
+              <div class="input-wrap">
+                <i class="ti ti-mail"></i>
+                <input type="email" class="form-input" id="login-email" placeholder="you@email.com" required autocomplete="email">
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Password</label>
+              <div class="input-wrap">
+                <i class="ti ti-lock"></i>
+                <input type="password" class="form-input" id="login-pass" placeholder="••••••••" required autocomplete="current-password">
+                <i class="ti ti-eye eye-btn" id="login-eye" onclick="toggleEye('login-pass','login-eye')"></i>
+              </div>
+              <a href="#" class="forgot-link" onclick="alert('Reset link sent!');return false">Forgot password?</a>
+            </div>
+            <button type="submit" class="btn-primary">Sign in →</button>
+          </form>
+          <div class="auth-footer">Don't have an account? <span onclick="navigate('signup')" style="color:var(--yellow2);font-weight:700;cursor:none">Sign up free</span></div>
+          <div class="trust-row"><span>🔒 Secure</span><span>⚡ Instant</span><span>✅ Free plan</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="page-upload" class="page">
+    <div class="app-shell">
+      <aside class="sidebar" id="main-sidebar">
+        <div class="sidebar-top">
+          <div class="sidebar-logo">
+            <i class="ti ti-bolt"></i>
+            <span class="sidebar-logo-text">ResumeAI</span>
+          </div>
+          <ul class="nav-list" id="sidebar-nav">
+            <li class="nav-item active" data-page="upload"><button onclick="navigate('upload')"><i class="ti ti-upload"></i><span>Upload Resume</span></button></li>
+            <li class="nav-item" data-page="analysis"><button onclick="navigate('analysis')"><i class="ti ti-chart-bar"></i><span>Analysis</span></button></li>
+            <li class="nav-item" data-page="result"><button onclick="navigate('result')"><i class="ti ti-file-report"></i><span>Results</span></button></li>
+            <li class="nav-item" data-page="feedback"><button onclick="navigate('feedback')"><i class="ti ti-message"></i><span>Feedback</span></button></li>
+            <li class="nav-item" data-page="history"><button onclick="navigate('history')"><i class="ti ti-history"></i><span>History</span></button></li>
+            <li class="nav-item" data-page="settings"><button onclick="navigate('settings')"><i class="ti ti-settings"></i><span>Settings</span></button></li>
+          </ul>
+        </div>
+        <div class="sidebar-bottom">
+          <div class="user-row">
+            <div class="user-avatar" id="sidebar-avatar">JD</div>
+            <div class="user-info">
+              <div class="user-name" id="sidebar-name">John Doe</div>
+              <div class="user-email" id="sidebar-email">john@example.com</div>
+            </div>
+            <button class="logout-btn" onclick="handleLogout()" title="Logout"><i class="ti ti-logout"></i></button>
+          </div>
+        </div>
+      </aside>
+      <div class="main-area">
+        <div class="mobile-topbar">
+          <button class="hamburger-btn" onclick="toggleMobileSidebar()"><i class="ti ti-menu-2"></i></button>
+          <div class="mobile-logo"><i class="ti ti-bolt"></i><span class="mobile-logo-text">ResumeAI</span></div>
+          <div class="topbar-avatar" id="mob-avatar-upload" onclick="toggleDropdown('drop-upload')">JD
+            <div class="user-dropdown" id="drop-upload">
+              <button class="dropdown-item" onclick="navigate('settings')">Settings</button>
+              <button class="dropdown-item" onclick="handleLogout()">Logout</button>
+            </div>
+          </div>
+        </div>
+        <header class="topbar">
+          <div class="topbar-left"><span class="topbar-page-title">Upload Resume</span></div>
+          <div class="topbar-right">
+            <div class="search-wrap"><i class="ti ti-search"></i><input type="text" class="search-input" placeholder="Search..."></div>
+            <button class="notif-btn"><i class="ti ti-bell"></i><div class="notif-dot"></div></button>
+            <div class="topbar-avatar" id="topbar-avatar-upload" onclick="toggleDropdown('drop-topbar-upload')"><span id="topbar-initials-upload">JD</span>
+              <div class="user-dropdown" id="drop-topbar-upload">
+                <button class="dropdown-item" onclick="navigate('settings')">Settings</button>
+                <button class="dropdown-item" onclick="handleLogout()">Logout</button>
+              </div>
+            </div>
+          </div>
+        </header>
+        <div class="content-body">
+          <div class="page-header">
+            <h1 class="page-h1">Upload Resume</h1>
+            <p class="page-sub">Upload your resume to get an AI-powered ATS score and improvement suggestions.</p>
+          </div>
+          <div class="card bordered-yellow" style="margin-bottom:20px">
+            <div class="card-title">Select Resume</div>
+            <div class="dropzone" id="dropzone" onclick="document.getElementById('file-input').click()" ondragover="dzDragOver(event)" ondragleave="dzDragLeave(event)" ondrop="dzDrop(event)">
+              <div id="dz-default">
+                <div style="display:flex;flex-direction:column;align-items:center;gap:10px">
+                  <i class="ti ti-file-text dropzone-icon"></i>
+                  <div class="dropzone-title">Drop your resume here</div>
+                  <div class="dropzone-sub">Supports PDF, DOCX, DOC · Max 10MB</div>
+                  <button class="btn-outline" style="margin-top:6px" onclick="event.stopPropagation();document.getElementById('file-input').click()"><i class="ti ti-upload"></i> Browse Files</button>
+                </div>
+              </div>
+              <div id="dz-selected" style="display:none">
+                <div class="dz-selected-info">
+                  <i class="ti ti-file-check" style="font-size:44px;color:#7bc742"></i>
+                  <div class="dz-file-name" id="dz-name">resume.pdf</div>
+                  <div class="dz-file-size" id="dz-size">1.2 MB</div>
+                  <button class="dz-change-btn" onclick="event.stopPropagation();clearFile()">Change file</button>
+                </div>
+              </div>
+            </div>
+            <input type="file" id="file-input" accept=".pdf,.doc,.docx" style="display:none" onchange="handleFileSelect(this)">
+          </div>
+          <div class="card bordered-yellow" style="margin-bottom:20px">
+            <div class="card-title">Job Description <span class="optional-badge">OPTIONAL</span></div>
+            <textarea class="jd-textarea" id="jd-input" placeholder="Paste the job description here to improve keyword matching accuracy..."></textarea>
+            <div class="jd-helper"><i class="ti ti-info-circle" style="font-size:13px;vertical-align:middle"></i> Pasting a JD improves keyword match accuracy by up to 40%</div>
+          </div>
+          <div class="card bordered-yellow" style="margin-bottom:20px">
+            <div class="card-title">Analysis Options</div>
+            <div class="checkbox-grid">
+              <label class="check-label"><input type="checkbox" checked id="opt-ats"> ATS Score Analysis</label>
+              <label class="check-label"><input type="checkbox" checked id="opt-kw"> Keyword Matching</label>
+              <label class="check-label"><input type="checkbox" checked id="opt-section"> Section Strength Audit</label>
+              <label class="check-label"><input type="checkbox" checked id="opt-ai"> AI Rewrite Suggestions</label>
+              <label class="check-label"><input type="checkbox" checked id="opt-bench"> Industry Benchmarking</label>
+              <label class="check-label"><input type="checkbox" checked id="opt-grammar"> Grammar & Clarity Check</label>
+            </div>
+          </div>
+          <div class="card bordered-yellow">
+            <button class="start-btn" id="start-btn" onclick="startAnalysis()" disabled>
+              <i class="ti ti-sparkles"></i> Start Analysis →
+            </button>
+            <div class="usage-bar-wrap" style="margin-top:16px">
+              <div class="usage-label">3 of 10 free analyses used this month</div>
+              <div class="usage-bar-bg"><div class="usage-bar-fill" style="width:30%"></div></div>
+            </div>
+          </div>
+        </div>
+        <nav class="bottom-nav">
+          <button class="bnav-item active" onclick="navigate('upload')"><i class="ti ti-upload"></i>Upload</button>
+          <button class="bnav-item" onclick="navigate('result')"><i class="ti ti-file-report"></i>Results</button>
+          <button class="bnav-item" onclick="navigate('feedback')"><i class="ti ti-message"></i>Feedback</button>
+          <button class="bnav-item" onclick="navigate('history')"><i class="ti ti-history"></i>History</button>
+          <button class="bnav-item" onclick="navigate('settings')"><i class="ti ti-settings"></i>Settings</button>
+        </nav>
+      </div>
+    </div>
+  </div>
+
+  <div id="page-analysis" class="page">
+    <div class="app-shell">
+      <aside class="sidebar" id="analysis-sidebar">
+        <div class="sidebar-top">
+          <div class="sidebar-logo"><i class="ti ti-bolt"></i><span class="sidebar-logo-text">ResumeAI</span></div>
+          <ul class="nav-list">
+            <li class="nav-item" data-page="upload"><button onclick="navigate('upload')"><i class="ti ti-upload"></i><span>Upload Resume</span></button></li>
+            <li class="nav-item active" data-page="analysis"><button onclick="navigate('analysis')"><i class="ti ti-chart-bar"></i><span>Analysis</span></button></li>
+            <li class="nav-item" data-page="result"><button onclick="navigate('result')"><i class="ti ti-file-report"></i><span>Results</span></button></li>
+            <li class="nav-item" data-page="feedback"><button onclick="navigate('feedback')"><i class="ti ti-message"></i><span>Feedback</span></button></li>
+            <li class="nav-item" data-page="history"><button onclick="navigate('history')"><i class="ti ti-history"></i><span>History</span></button></li>
+            <li class="nav-item" data-page="settings"><button onclick="navigate('settings')"><i class="ti ti-settings"></i><span>Settings</span></button></li>
+          </ul>
+        </div>
+        <div class="sidebar-bottom"><div class="user-row"><div class="user-avatar" id="analysis-avatar">JD</div><div class="user-info"><div class="user-name" id="analysis-name">John Doe</div><div class="user-email" id="analysis-email">john@example.com</div></div><button class="logout-btn" onclick="handleLogout()"><i class="ti ti-logout"></i></button></div></div>
+      </aside>
+      <div class="main-area">
+        <div class="mobile-topbar">
+          <button class="hamburger-btn" onclick="toggleMobileSidebar()"><i class="ti ti-menu-2"></i></button>
+          <div class="mobile-logo"><i class="ti ti-bolt"></i><span class="mobile-logo-text">ResumeAI</span></div>
+          <div class="topbar-avatar">JD</div>
+        </div>
+        <header class="topbar">
+          <div class="topbar-left"><span class="topbar-page-title">Analysis in Progress</span></div>
+          <div class="topbar-right"><button class="notif-btn"><i class="ti ti-bell"></i><div class="notif-dot"></div></button><div class="topbar-avatar">JD</div></div>
+        </header>
+        <div class="content-body">
+          <div class="analysis-wrap">
+            <div class="analysis-graphic">
+              <svg class="analysis-svg" viewBox="0 0 160 160">
+                <circle class="arc-bg" cx="80" cy="80" r="70"/>
+                <circle class="arc-fill" id="analysis-arc" cx="80" cy="80" r="70"/>
+              </svg>
+              <div class="analysis-icon-center">
+                <i class="ti ti-file-text"></i>
+                <div class="analysis-pct" id="analysis-pct">0%</div>
+              </div>
+            </div>
+            <h2 class="analysis-h2" id="analysis-title">Analyzing your resume...</h2>
+            <p class="analysis-sub-text" id="analysis-subtitle">Please wait while our AI processes your document</p>
+            <div class="stages-list" id="stages-list">
+              <div class="stage-item" id="stage-0">
+                <div class="stage-icon"><i class="ti ti-circle"></i></div>
+                <div class="stage-name">Uploading and parsing resume...</div>
+                <div class="stage-status" id="stage-status-0">pending</div>
+              </div>
+              <div class="stage-item" id="stage-1">
+                <div class="stage-icon"><i class="ti ti-circle"></i></div>
+                <div class="stage-name">Extracting text and structure...</div>
+                <div class="stage-status" id="stage-status-1">pending</div>
+              </div>
+              <div class="stage-item" id="stage-2">
+                <div class="stage-icon"><i class="ti ti-circle"></i></div>
+                <div class="stage-name">Running ATS compatibility scan...</div>
+                <div class="stage-status" id="stage-status-2">pending</div>
+              </div>
+              <div class="stage-item" id="stage-3">
+                <div class="stage-icon"><i class="ti ti-circle"></i></div>
+                <div class="stage-name">Matching keywords against job description...</div>
+                <div class="stage-status" id="stage-status-3">pending</div>
+              </div>
+              <div class="stage-item" id="stage-4">
+                <div class="stage-icon"><i class="ti ti-circle"></i></div>
+                <div class="stage-name">Generating AI recommendations...</div>
+                <div class="stage-status" id="stage-status-4">pending</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <nav class="bottom-nav">
+          <button class="bnav-item" onclick="navigate('upload')"><i class="ti ti-upload"></i>Upload</button>
+          <button class="bnav-item active" onclick="navigate('analysis')"><i class="ti ti-chart-bar"></i>Analysis</button>
+          <button class="bnav-item" onclick="navigate('result')"><i class="ti ti-file-report"></i>Results</button>
+          <button class="bnav-item" onclick="navigate('feedback')"><i class="ti ti-message"></i>Feedback</button>
+          <button class="bnav-item" onclick="navigate('history')"><i class="ti ti-history"></i>History</button>
+        </nav>
+      </div>
+    </div>
+  </div>
+
+  <div id="page-result" class="page">
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="sidebar-top">
+          <div class="sidebar-logo"><i class="ti ti-bolt"></i><span class="sidebar-logo-text">ResumeAI</span></div>
+          <ul class="nav-list">
+            <li class="nav-item" data-page="upload"><button onclick="navigate('upload')"><i class="ti ti-upload"></i><span>Upload Resume</span></button></li>
+            <li class="nav-item" data-page="analysis"><button onclick="navigate('analysis')"><i class="ti ti-chart-bar"></i><span>Analysis</span></button></li>
+            <li class="nav-item active" data-page="result"><button onclick="navigate('result')"><i class="ti ti-file-report"></i><span>Results</span></button></li>
+            <li class="nav-item" data-page="feedback"><button onclick="navigate('feedback')"><i class="ti ti-message"></i><span>Feedback</span></button></li>
+            <li class="nav-item" data-page="history"><button onclick="navigate('history')"><i class="ti ti-history"></i><span>History</span></button></li>
+            <li class="nav-item" data-page="settings"><button onclick="navigate('settings')"><i class="ti ti-settings"></i><span>Settings</span></button></li>
+          </ul>
+        </div>
+        <div class="sidebar-bottom"><div class="user-row"><div class="user-avatar" id="result-avatar">JD</div><div class="user-info"><div class="user-name" id="result-name">John Doe</div><div class="user-email" id="result-email">john@example.com</div></div><button class="logout-btn" onclick="handleLogout()"><i class="ti ti-logout"></i></button></div></div>
+      </aside>
+      <div class="main-area">
+        <div class="mobile-topbar">
+          <button class="hamburger-btn" onclick="toggleMobileSidebar()"><i class="ti ti-menu-2"></i></button>
+          <div class="mobile-logo"><i class="ti ti-bolt"></i><span class="mobile-logo-text">ResumeAI</span></div>
+          <div class="topbar-avatar">JD</div>
+        </div>
+        <header class="topbar">
+          <div class="topbar-left"><span class="topbar-page-title">Analysis Results</span></div>
+          <div class="topbar-right">
+            <div class="search-wrap"><i class="ti ti-search"></i><input type="text" class="search-input" placeholder="Search..."></div>
+            <button class="notif-btn"><i class="ti ti-bell"></i><div class="notif-dot"></div></button>
+            <div class="topbar-avatar" onclick="toggleDropdown('drop-result')">JD<div class="user-dropdown" id="drop-result"><button class="dropdown-item" onclick="navigate('settings')">Settings</button><button class="dropdown-item" onclick="handleLogout()">Logout</button></div></div>
+          </div>
+        </header>
+        <div class="content-body">
+          <div class="results-page">
+            <div class="hero-score-card">
+              <div class="hero-left">
+                <div class="hero-score-label">Resume Score</div>
+                <div class="hero-filename" id="result-filename">frontend_developer_resume.pdf</div>
+                <div class="hero-role-pill"><i class="ti ti-briefcase" style="font-size:13px"></i> Frontend Developer</div>
+                <div class="status-pills">
+                  <span class="status-pill green"><i class="ti ti-circle-check" style="font-size:12px"></i> ATS Ready</span>
+                  <span class="status-pill red"><i class="ti ti-alert-circle" style="font-size:12px"></i> Weak Summary</span>
+                  <span class="status-pill yellow"><i class="ti ti-star" style="font-size:12px"></i> Skills Match</span>
+                </div>
+              </div>
+              <div class="score-ring-wrap">
+                <svg class="score-ring-svg" viewBox="0 0 140 140">
+                  <circle class="score-ring-bg" cx="70" cy="70" r="55"/>
+                  <circle class="score-ring-fill" id="score-ring-fill" cx="70" cy="70" r="55" style="stroke:#FFD600;stroke-dashoffset:345"/>
+                </svg>
+                <div class="score-ring-center">
+                  <div class="score-num mono" id="score-display">0</div>
+                  <div class="score-denom">/100</div>
+                </div>
+              </div>
+            </div>
+            <div class="results-grid">
+              <div>
+                <div class="card bordered-yellow">
+                  <div class="card-title">Section Strength</div>
+                  <div id="section-bars"></div>
+                </div>
+                <div class="card bordered-yellow">
+                  <div class="card-title">Issues Found</div>
+                  <div id="issues-list"></div>
+                </div>
+              </div>
+              <div>
+                <div class="card bordered-yellow" style="margin-bottom:20px">
+                  <div class="card-title">Keyword Match</div>
+                  <div class="kw-counter mono"><span id="kw-found-count">5</span>/<span id="kw-total-count">8</span> <span>keywords matched</span></div>
+                  <div class="kw-group-label">Found</div>
+                  <div class="kw-pills" id="kw-found"></div>
+                  <div class="kw-group-label">Missing</div>
+                  <div class="kw-pills" id="kw-missing"></div>
+                </div>
+                <div class="card bordered-yellow">
+                  <div class="card-title">Quick Actions</div>
+                  <div class="quick-actions">
+                    <button class="btn-outline" style="width:100%;justify-content:flex-start" onclick="alert('PDF report downloading...')"><i class="ti ti-download"></i> Download PDF Report</button>
+                    <button class="btn-ghost" style="width:100%;justify-content:flex-start" onclick="copyTips()"><i class="ti ti-copy"></i> Copy Improvement Tips</button>
+                    <button class="btn-ghost" style="width:100%;justify-content:flex-start" onclick="navigate('upload')"><i class="ti ti-refresh"></i> Reanalyze with New JD</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="card bordered-yellow" style="margin-top:0">
+              <div class="results-tabs">
+                <button class="results-tab active" onclick="switchTab('issues',this)">Issues</button>
+                <button class="results-tab" onclick="switchTab('suggestions',this)">Suggestions</button>
+                <button class="results-tab" onclick="switchTab('rewrite',this)">AI Rewrite</button>
+              </div>
+              <div id="tab-issues" class="tab-panel active">
+                <!-- Dynamically populated by JS -->
+              </div>
+              <div id="tab-suggestions" class="tab-panel">
+                <!-- Dynamically populated by JS -->
+              </div>
+              <div id="tab-rewrite" class="tab-panel">
+                <!-- Dynamically populated by JS -->
+              </div>
+            </div>
+          </div>
+        </div>
+        <nav class="bottom-nav">
+          <button class="bnav-item" onclick="navigate('upload')"><i class="ti ti-upload"></i>Upload</button>
+          <button class="bnav-item" onclick="navigate('analysis')"><i class="ti ti-chart-bar"></i>Analysis</button>
+          <button class="bnav-item active" onclick="navigate('result')"><i class="ti ti-file-report"></i>Results</button>
+          <button class="bnav-item" onclick="navigate('feedback')"><i class="ti ti-message"></i>Feedback</button>
+          <button class="bnav-item" onclick="navigate('history')"><i class="ti ti-history"></i>History</button>
+        </nav>
+      </div>
+    </div>
+  </div>
+
+  <div id="page-feedback" class="page">
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="sidebar-top">
+          <div class="sidebar-logo"><i class="ti ti-bolt"></i><span class="sidebar-logo-text">ResumeAI</span></div>
+          <ul class="nav-list">
+            <li class="nav-item" data-page="upload"><button onclick="navigate('upload')"><i class="ti ti-upload"></i><span>Upload Resume</span></button></li>
+            <li class="nav-item" data-page="analysis"><button onclick="navigate('analysis')"><i class="ti ti-chart-bar"></i><span>Analysis</span></button></li>
+            <li class="nav-item" data-page="result"><button onclick="navigate('result')"><i class="ti ti-file-report"></i><span>Results</span></button></li>
+            <li class="nav-item active" data-page="feedback"><button onclick="navigate('feedback')"><i class="ti ti-message"></i><span>Feedback</span></button></li>
+            <li class="nav-item" data-page="history"><button onclick="navigate('history')"><i class="ti ti-history"></i><span>History</span></button></li>
+            <li class="nav-item" data-page="settings"><button onclick="navigate('settings')"><i class="ti ti-settings"></i><span>Settings</span></button></li>
+          </ul>
+        </div>
+        <div class="sidebar-bottom"><div class="user-row"><div class="user-avatar" id="feedback-avatar">JD</div><div class="user-info"><div class="user-name" id="feedback-name">John Doe</div><div class="user-email" id="feedback-email">john@example.com</div></div><button class="logout-btn" onclick="handleLogout()"><i class="ti ti-logout"></i></button></div></div>
+      </aside>
+      <div class="main-area">
+        <div class="mobile-topbar">
+          <button class="hamburger-btn" onclick="toggleMobileSidebar()"><i class="ti ti-menu-2"></i></button>
+          <div class="mobile-logo"><i class="ti ti-bolt"></i><span class="mobile-logo-text">ResumeAI</span></div>
+          <div class="topbar-avatar">JD</div>
+        </div>
+        <header class="topbar">
+          <div class="topbar-left"><span class="topbar-page-title">Send Feedback</span></div>
+          <div class="topbar-right"><button class="notif-btn"><i class="ti ti-bell"></i><div class="notif-dot"></div></button><div class="topbar-avatar" onclick="toggleDropdown('drop-fb')">JD<div class="user-dropdown" id="drop-fb"><button class="dropdown-item" onclick="navigate('settings')">Settings</button><button class="dropdown-item" onclick="handleLogout()">Logout</button></div></div></div>
+        </header>
+        <div class="content-body">
+          <div class="page-header">
+            <h1 class="page-h1">Send Feedback</h1>
+            <p class="page-sub">Help us improve ResumeAI. We read every response.</p>
+          </div>
+          <div id="feedback-form-wrap">
+            <div class="card bordered-yellow" style="margin-bottom:20px">
+              <div class="card-title">How was your analysis?</div>
+              <div class="emoji-row">
+                <button class="emoji-btn" onclick="selectEmoji(this,'😞')" title="Terrible">😞</button>
+                <button class="emoji-btn" onclick="selectEmoji(this,'😐')" title="Meh">😐</button>
+                <button class="emoji-btn" onclick="selectEmoji(this,'🙂')" title="Good">🙂</button>
+                <button class="emoji-btn" onclick="selectEmoji(this,'😊')" title="Great">😊</button>
+                <button class="emoji-btn" onclick="selectEmoji(this,'🤩')" title="Amazing">🤩</button>
+              </div>
+            </div>
+            <div class="card bordered-yellow" style="margin-bottom:20px">
+              <div class="card-title">What worked well?</div>
+              <div class="pill-tags">
+                <button class="pill-tag" onclick="togglePill(this)">Accurate score</button>
+                <button class="pill-tag" onclick="togglePill(this)">Helpful suggestions</button>
+                <button class="pill-tag" onclick="togglePill(this)">Clear layout</button>
+                <button class="pill-tag" onclick="togglePill(this)">Fast analysis</button>
+                <button class="pill-tag" onclick="togglePill(this)">Good keyword tips</button>
+                <button class="pill-tag" onclick="togglePill(this)">Easy to use</button>
+              </div>
+            </div>
+            <div class="card bordered-yellow" style="margin-bottom:20px">
+              <div class="card-title">Tell us more <span class="optional-badge">OPTIONAL</span></div>
+              <textarea class="jd-textarea" id="feedback-text" placeholder="Any other thoughts? We read every response..." style="height:120px"></textarea>
+            </div>
+            <button class="start-btn" onclick="submitFeedback()" style="width: fit-content; padding: 0 80px;"><i class="ti ti-send"></i> Send Feedback →</button>
+          </div>
+          <div id="feedback-success-wrap" style="display:none">
+            <div class="card bordered-yellow">
+              <div class="feedback-success">
+                <i class="ti ti-circle-check"></i>
+                <h2>Thank you!</h2>
+                <p>Your feedback helps us improve ResumeAI for everyone. We really appreciate it.</p>
+                <button class="btn-primary" style="width: fit-content; padding: 0 60px; margin:24px auto 0" onclick="navigate('upload')">Back to Upload</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <nav class="bottom-nav">
+          <button class="bnav-item" onclick="navigate('upload')"><i class="ti ti-upload"></i>Upload</button>
+          <button class="bnav-item" onclick="navigate('result')"><i class="ti ti-file-report"></i>Results</button>
+          <button class="bnav-item active" onclick="navigate('feedback')"><i class="ti ti-message"></i>Feedback</button>
+          <button class="bnav-item" onclick="navigate('history')"><i class="ti ti-history"></i>History</button>
+          <button class="bnav-item" onclick="navigate('settings')"><i class="ti ti-settings"></i>Settings</button>
+        </nav>
+      </div>
+    </div>
+  </div>
+
+  <div id="page-history" class="page">
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="sidebar-top">
+          <div class="sidebar-logo"><i class="ti ti-bolt"></i><span class="sidebar-logo-text">ResumeAI</span></div>
+          <ul class="nav-list">
+            <li class="nav-item" data-page="upload"><button onclick="navigate('upload')"><i class="ti ti-upload"></i><span>Upload Resume</span></button></li>
+            <li class="nav-item" data-page="analysis"><button onclick="navigate('analysis')"><i class="ti ti-chart-bar"></i><span>Analysis</span></button></li>
+            <li class="nav-item" data-page="result"><button onclick="navigate('result')"><i class="ti ti-file-report"></i><span>Results</span></button></li>
+            <li class="nav-item" data-page="feedback"><button onclick="navigate('feedback')"><i class="ti ti-message"></i><span>Feedback</span></button></li>
+            <li class="nav-item active" data-page="history"><button onclick="navigate('history')"><i class="ti ti-history"></i><span>History</span></button></li>
+            <li class="nav-item" data-page="settings"><button onclick="navigate('settings')"><i class="ti ti-settings"></i><span>Settings</span></button></li>
+          </ul>
+        </div>
+        <div class="sidebar-bottom"><div class="user-row"><div class="user-avatar" id="history-avatar">JD</div><div class="user-info"><div class="user-name" id="history-name">John Doe</div><div class="user-email" id="history-email">john@example.com</div></div><button class="logout-btn" onclick="handleLogout()"><i class="ti ti-logout"></i></button></div></div>
+      </aside>
+      <div class="main-area">
+        <div class="mobile-topbar">
+          <button class="hamburger-btn" onclick="toggleMobileSidebar()"><i class="ti ti-menu-2"></i></button>
+          <div class="mobile-logo"><i class="ti ti-bolt"></i><span class="mobile-logo-text">ResumeAI</span></div>
+          <div class="topbar-avatar">JD</div>
+        </div>
+        <header class="topbar">
+          <div class="topbar-left"><span class="topbar-page-title">Resume History</span></div>
+          <div class="topbar-right">
+            <button class="btn-primary" style="width:auto;height:36px;padding:0 16px;font-size:13px" onclick="navigate('upload')"><i class="ti ti-plus"></i> New Analysis</button>
+            <button class="notif-btn"><i class="ti ti-bell"></i><div class="notif-dot"></div></button>
+            <div class="topbar-avatar" onclick="toggleDropdown('drop-hist')">JD<div class="user-dropdown" id="drop-hist"><button class="dropdown-item" onclick="navigate('settings')">Settings</button><button class="dropdown-item" onclick="handleLogout()">Logout</button></div></div>
+          </div>
+        </header>
+        <div class="content-body">
+          <div class="page-header">
+            <h1 class="page-h1">Resume History</h1>
+            <p class="page-sub">View and manage all your previous resume analyses.</p>
+          </div>
+          <div class="filter-row">
+            <div class="filter-tabs">
+              <button class="filter-tab active" onclick="filterHistory('all',this)">All</button>
+              <button class="filter-tab" onclick="filterHistory('week',this)">This Week</button>
+              <button class="filter-tab" onclick="filterHistory('month',this)">This Month</button>
+            </div>
+            <div style="position:relative;flex:1;max-width:280px">
+              <i class="ti ti-search" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:14px;pointer-events:none"></i>
+              <input type="text" class="history-search" placeholder="Search resumes..." oninput="searchHistory(this.value)" style="padding-left:36px;width:100%">
+            </div>
+          </div>
+          <div class="history-table-wrap">
+            <table class="history-table" id="history-table">
+              <thead>
+                <tr>
+                  <th>File Name</th>
+                  <th>Date</th>
+                  <th>Score</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="history-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+        <nav class="bottom-nav">
+          <button class="bnav-item" onclick="navigate('upload')"><i class="ti ti-upload"></i>Upload</button>
+          <button class="bnav-item" onclick="navigate('result')"><i class="ti ti-file-report"></i>Results</button>
+          <button class="bnav-item" onclick="navigate('feedback')"><i class="ti ti-message"></i>Feedback</button>
+          <button class="bnav-item active" onclick="navigate('history')"><i class="ti ti-history"></i>History</button>
+          <button class="bnav-item" onclick="navigate('settings')"><i class="ti ti-settings"></i>Settings</button>
+        </nav>
+      </div>
+    </div>
+  </div>
+
+  <div id="page-settings" class="page">
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="sidebar-top">
+          <div class="sidebar-logo"><i class="ti ti-bolt"></i><span class="sidebar-logo-text">ResumeAI</span></div>
+          <ul class="nav-list">
+            <li class="nav-item" data-page="upload"><button onclick="navigate('upload')"><i class="ti ti-upload"></i><span>Upload Resume</span></button></li>
+            <li class="nav-item" data-page="analysis"><button onclick="navigate('analysis')"><i class="ti ti-chart-bar"></i><span>Analysis</span></button></li>
+            <li class="nav-item" data-page="result"><button onclick="navigate('result')"><i class="ti ti-file-report"></i><span>Results</span></button></li>
+            <li class="nav-item" data-page="feedback"><button onclick="navigate('feedback')"><i class="ti ti-message"></i><span>Feedback</span></button></li>
+            <li class="nav-item" data-page="history"><button onclick="navigate('history')"><i class="ti ti-history"></i><span>History</span></button></li>
+            <li class="nav-item active" data-page="settings"><button onclick="navigate('settings')"><i class="ti ti-settings"></i><span>Settings</span></button></li>
+          </ul>
+        </div>
+        <div class="sidebar-bottom"><div class="user-row"><div class="user-avatar" id="settings-avatar">JD</div><div class="user-info"><div class="user-name" id="settings-name">John Doe</div><div class="user-email" id="settings-email">john@example.com</div></div><button class="logout-btn" onclick="handleLogout()"><i class="ti ti-logout"></i></button></div></div>
+      </aside>
+      <div class="main-area">
+        <div class="mobile-topbar">
+          <button class="hamburger-btn" onclick="toggleMobileSidebar()"><i class="ti ti-menu-2"></i></button>
+          <div class="mobile-logo"><i class="ti ti-bolt"></i><span class="mobile-logo-text">ResumeAI</span></div>
+          <div class="topbar-avatar">JD</div>
+        </div>
+        <header class="topbar">
+          <div class="topbar-left"><span class="topbar-page-title">Settings</span></div>
+          <div class="topbar-right"><button class="notif-btn"><i class="ti ti-bell"></i><div class="notif-dot"></div></button><div class="topbar-avatar" onclick="toggleDropdown('drop-set')">JD<div class="user-dropdown" id="drop-set"><button class="dropdown-item" onclick="navigate('upload')">Dashboard</button><button class="dropdown-item" onclick="handleLogout()">Logout</button></div></div></div>
+        </header>
+        <div class="content-body">
+          <div class="page-header">
+            <h1 class="page-h1">Settings</h1>
+            <p class="page-sub">Manage your account and preferences.</p>
+          </div>
+          <div class="settings-wrap">
+            <div class="settings-section">
+              <div class="settings-section-title">Profile</div>
+              <div class="form-group"><label class="form-label">Full Name</label><input type="text" class="form-input" id="settings-fullname" style="padding-left:14px" placeholder="Your full name"></div>
+              <div class="form-group"><label class="form-label">Email</label><input type="email" class="form-input" id="settings-email-input" style="padding-left:14px" placeholder="your@email.com"></div>
+              <div class="form-group"><label class="form-label">Target Role</label><input type="text" class="form-input" id="settings-role" style="padding-left:14px" placeholder="e.g. Frontend Developer"></div>
+              <button class="btn-primary" style="width:auto;padding:0 24px;height:44px;font-size:14px;margin-top:4px" onclick="saveSettings()"><i class="ti ti-check"></i> Save Changes</button>
+            </div>
+            <div class="settings-section">
+              <div class="settings-section-title">Notifications</div>
+              <div class="settings-row">
+                <div><div class="settings-row-label">Analysis complete alerts</div><div class="settings-row-sub">Get notified when your analysis finishes</div></div>
+                <label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+              </div>
+              <div class="settings-row">
+                <div><div class="settings-row-label">Weekly tips email</div><div class="settings-row-sub">Resume improvement tips every Monday</div></div>
+                <label class="toggle"><input type="checkbox"><span class="toggle-slider"></span></label>
+              </div>
+              <div class="settings-row">
+                <div><div class="settings-row-label">Product updates</div><div class="settings-row-sub">New features and improvements</div></div>
+                <label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+              </div>
+            </div>
+            <div class="settings-section">
+              <div class="settings-section-title">Danger Zone</div>
+              <div class="settings-row">
+                <div><div class="settings-row-label">Delete all history</div><div class="settings-row-sub">Permanently remove all analysis records</div></div>
+                <button class="danger-btn" onclick="if(confirm('Delete all history? This cannot be undone.')){localStorage.removeItem('resumeai_analyses');alert('History cleared.')}">Delete All</button>
+              </div>
+              <div class="settings-row">
+                <div><div class="settings-row-label">Delete account</div><div class="settings-row-sub">Permanently delete your account and all data</div></div>
+                <button class="danger-btn" onclick="if(confirm('Delete your account? This cannot be undone.')){handleLogout()}">Delete Account</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <nav class="bottom-nav">
+          <button class="bnav-item" onclick="navigate('upload')"><i class="ti ti-upload"></i>Upload</button>
+          <button class="bnav-item" onclick="navigate('result')"><i class="ti ti-file-report"></i>Results</button>
+          <button class="bnav-item" onclick="navigate('feedback')"><i class="ti ti-message"></i>Feedback</button>
+          <button class="bnav-item" onclick="navigate('history')"><i class="ti ti-history"></i>History</button>
+          <button class="bnav-item active" onclick="navigate('settings')"><i class="ti ti-settings"></i>Settings</button>
+        </nav>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleMobileSidebar()"></div>
+
+<script>
+// --- BACKEND CONFIGURATION ---
+// Connected to n8n backend
+const N8N_WEBHOOK_URL = 'https://succesgm01.app.n8n.cloud/webhook/resume-upload';
+let currentAnalysisResult = null;
+
+const MOCK_RESULT={score:76,sections:{Experience:88,Skills:80,Summary:52,Education:95,Impact:44},keywords:{found:['Python','React','REST API','SQL','Git'],missing:['Docker','CI/CD','Kubernetes']},issues:[],suggestions:[]};
+let currentUser=null;
+let currentFile=null;
+let analysisTimer=null;
+let mobileSidebarOpen=false;
+let selectedEmoji=null;
+let analysisRunning=false;
+
+function getInitials(name){return name?name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase():'JD'}
+
+function getUser(){
+  try{
+    const u=localStorage.getItem('resumeai_user');
+    return u?JSON.parse(u):null;
+  }catch(e){return null}
+}
+
+function setUser(u){
+  localStorage.setItem('resumeai_user',JSON.stringify(u));
+  currentUser=u;
+}
+
+function updateUserUI(){
+  const u=currentUser||{name:'John Doe',email:'john@example.com'};
+  const initials=getInitials(u.name);
+  ['sidebar','analysis','result','feedback','history','settings'].forEach(id=>{
+    const av=document.getElementById(id+'-avatar');
+    const nm=document.getElementById(id+'-name');
+    const em=document.getElementById(id+'-email');
+    if(av)av.textContent=initials;
+    if(nm)nm.textContent=u.name;
+    if(em)em.textContent=u.email;
+  });
+  const ti=document.getElementById('topbar-initials-upload');
+  if(ti)ti.textContent=initials;
+  const mob=document.getElementById('mob-avatar-upload');
+  if(mob)mob.childNodes[0].textContent=initials;
+  const sf=document.getElementById('settings-fullname');
+  const se=document.getElementById('settings-email-input');
+  if(sf)sf.value=u.name||'';
+  if(se)se.value=u.email||'';
+}
+
+function navigate(page){
+  closeAllDropdowns();
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  const el=document.getElementById('page-'+page);
+  if(el){el.classList.add('active');window.scrollTo(0,0)}
+  if(['upload','analysis','result','feedback','history','settings'].includes(page)){
+    currentUser=getUser();
+    if(!currentUser&&page!=='signup'&&page!=='login'){navigate('login');return}
+    updateUserUI();
+  }
+  if(page==='result')renderResults();
+  if(page==='history')renderHistory();
+  if(page==='analysis'&&!analysisRunning)runAnalysis();
+  rebindCursor();
+}
+
+function handleSSO(){
+  const u={name:'Demo User',email:'demo@resumeai.com'};
+  setUser(u);
+  navigate('upload');
+}
+
+function handleSignup(e){
+  e.preventDefault();
+  const name=document.getElementById('signup-name').value.trim();
+  const email=document.getElementById('signup-email').value.trim();
+  const pass=document.getElementById('signup-pass').value;
+  const confirm=document.getElementById('signup-confirm').value;
+  const err=document.getElementById('confirm-err');
+  if(pass!==confirm){
+    document.getElementById('signup-confirm').classList.add('error');
+    err.style.display='block';
+    return;
+  }
+  err.style.display='none';
+  document.getElementById('signup-confirm').classList.remove('error');
+  const u={name,email};
+  setUser(u);
+  navigate('upload');
+}
+
+function handleLogin(e){
+  e.preventDefault();
+  const email=document.getElementById('login-email').value;
+  const pass=document.getElementById('login-pass').value;
+  const errBanner=document.getElementById('login-error');
+  if(email==='demo@resumeai.com'&&pass==='demopass123'){
+    errBanner.classList.remove('show');
+    setUser({name:'Demo User',email:'demo@resumeai.com'});
+    navigate('upload');
+  } else if(email&&pass&&pass.length>=6){
+    errBanner.classList.remove('show');
+    setUser({name:email.split('@')[0].replace(/[^a-zA-Z ]/g,' ').trim()||'User',email});
+    navigate('upload');
+  } else {
+    errBanner.classList.add('show');
+  }
+}
+
+function handleLogout(){
+  localStorage.removeItem('resumeai_user');
+  currentUser=null;
+  navigate('login');
+}
+
+function toggleEye(inputId,iconId){
+  const inp=document.getElementById(inputId);
+  const ico=document.getElementById(iconId);
+  if(inp.type==='password'){inp.type='text';ico.classList.replace('ti-eye','ti-eye-off')}
+  else{inp.type='password';ico.classList.replace('ti-eye-off','ti-eye')}
+}
+
+function updateStrength(val){
+  let score=0;
+  if(val.length>=8)score++;
+  if(/[A-Z]/.test(val))score++;
+  if(/[0-9]/.test(val))score++;
+  if(/[^A-Za-z0-9]/.test(val))score++;
+  const colors=['','#D32F2F','#FF6D00','#FFD600','#7bc742'];
+  [1,2,3,4].forEach(i=>{
+    const seg=document.getElementById('seg'+i);
+    if(seg)seg.style.background=i<=score?colors[score]:'var(--border)';
+  });
+}
+
+function handleFileSelect(input){
+  const file=input.files[0];
+  if(!file)return;
+  currentFile=file;
+  document.getElementById('dz-default').style.display='none';
+  document.getElementById('dz-selected').style.display='block';
+  document.getElementById('dz-name').textContent=file.name;
+  document.getElementById('dz-size').textContent=(file.size/1024/1024).toFixed(2)+' MB';
+  document.getElementById('dropzone').classList.add('selected');
+  document.getElementById('start-btn').disabled=false;
+  rebindCursor();
+}
+
+function clearFile(){
+  currentFile=null;
+  document.getElementById('file-input').value='';
+  document.getElementById('dz-default').style.display='block';
+  document.getElementById('dz-selected').style.display='none';
+  document.getElementById('dropzone').classList.remove('selected');
+  document.getElementById('start-btn').disabled=true;
+}
+
+function dzDragOver(e){e.preventDefault();document.getElementById('dropzone').classList.add('drag-over')}
+function dzDragLeave(e){document.getElementById('dropzone').classList.remove('drag-over')}
+function dzDrop(e){
+  e.preventDefault();
+  document.getElementById('dropzone').classList.remove('drag-over');
+  const files=e.dataTransfer.files;
+  if(files.length){
+    const fakeInput={files:files};
+    handleFileSelect(fakeInput);
+  }
+}
+
+function startAnalysis(){
+  if(!currentFile)return;
+  const fname=currentFile.name;
+  localStorage.setItem('resumeai_current_file',fname);
+  navigate('analysis');
+}
+
+let analysisPct=0;
+async function runAnalysis(){
+  analysisRunning=true;
+  analysisPct=0;
+  currentAnalysisResult=null;
+  const arc=document.getElementById('analysis-arc');
+  const pctEl=document.getElementById('analysis-pct');
+  const circumference=2*Math.PI*70;
+  const stagePcts=[15,35,58,78,95];
+  let stageIdx=0;
+  [0,1,2,3,4].forEach(i=>{
+    const item=document.getElementById('stage-'+i);
+    const status=document.getElementById('stage-status-'+i);
+    const icon=item.querySelector('.stage-icon');
+    item.className='stage-item';
+    status.textContent='pending';
+    icon.innerHTML='<i class="ti ti-circle"></i>';
+  });
+  if(arc){arc.style.strokeDasharray=circumference;arc.style.strokeDashoffset=circumference}
+  
+  let fetchComplete=false;
+  const formData=new FormData();
+  if(currentFile) formData.append('data',currentFile);
+  
+  console.log('[DEBUG] 1. Request start: Sending POST to', N8N_WEBHOOK_URL);
+  console.log('[DEBUG] 2. Payload size:', currentFile ? currentFile.size : 0, 'bytes');
+
+  fetch(N8N_WEBHOOK_URL,{method:'POST',body:formData})
+    .then(async(res)=>{
+      console.log('[DEBUG] 3. Request success: Received response with status', res.status);
+      if(!res.ok) throw new Error('Webhook error: '+res.status);
+      
+      const rawText = await res.text();
+      console.log('[DEBUG] 4. Response body (raw text):', rawText);
+      
+      let parsedJson;
+      try {
+        parsedJson = JSON.parse(rawText);
+        console.log('[DEBUG] 5. JSON parsing successful:', parsedJson);
+      } catch (e) {
+        console.error('[DEBUG] 5. JSON parsing FAILED:', e);
+        throw e;
+      }
+      
+      // Deep unwrap to find the actual AI payload, no matter how n8n nests it
+      const unwrap = (obj) => {
+        if (!obj || typeof obj !== 'object') return obj;
+        // If we found the actual data, return it
+        if (obj.atsScore !== undefined || obj.score !== undefined || obj.issues !== undefined || obj.aiRewrite !== undefined) return obj;
+        
+        // Otherwise, aggressively dig through common n8n wrappers
+        if (Array.isArray(obj) && obj.length > 0) return unwrap(obj[0]);
+        if (obj.body) return unwrap(obj.body);
+        if (obj.data) return unwrap(obj.data);
+        if (obj.json) return unwrap(obj.json);
+        if (obj.response) return unwrap(obj.response);
+        if (obj.output) return unwrap(obj.output);
+        if (obj.message) return unwrap(obj.message);
+        if (obj.text) {
+          // Sometimes AI output is wrapped in a string with markdown
+          try {
+            const cleanText = obj.text.replace(/```json/g, '').replace(/```/g, '').trim();
+            const textParsed = JSON.parse(cleanText);
+            return unwrap(textParsed);
+          } catch(e) {}
+        }
+        return obj;
+      };
+      
+      currentAnalysisResult = unwrap(parsedJson);
+      console.log('[DEBUG] 7. State updated. currentAnalysisResult saved as:', currentAnalysisResult);
+    })
+    .catch(err=>{
+      console.error("[DEBUG] Backend fetch failed, falling back to MOCK_RESULT:",err);
+      currentAnalysisResult=MOCK_RESULT;
+    })
+    .finally(()=>{
+      fetchComplete=true;
+      console.log('[DEBUG] 8. Fetch complete flag set to true.');
+    });
+
+  const interval=setInterval(()=>{
+    if(analysisPct>=100){
+      clearInterval(interval);
+      analysisRunning=false;
+      document.getElementById('analysis-title').textContent='Analysis complete!';
+      document.getElementById('analysis-subtitle').textContent='Navigating to your results...';
+      setTimeout(()=>{
+        const fname=localStorage.getItem('resumeai_current_file')||'resume.pdf';
+        
+        // Defensive check before accessing score in case state save failed
+        const finalScore = currentAnalysisResult && currentAnalysisResult.score !== undefined ? currentAnalysisResult.score : MOCK_RESULT.score;
+        console.log('[DEBUG] 9. Saving to history with score:', finalScore);
+        
+        addToHistory(fname, finalScore);
+        console.log('[DEBUG] 10. Navigating to result page...');
+        navigate('result');
+      },700);
+      return;
+    }
+    
+    if(analysisPct<95 && !fetchComplete){
+      analysisPct=Math.min(95,analysisPct+(Math.random()*1.5+0.2));
+    } else if(fetchComplete){
+      analysisPct=Math.min(100,analysisPct+4);
+    }
+    
+    const rounded=Math.floor(analysisPct);
+    if(pctEl)pctEl.textContent=rounded+'%';
+    if(arc){
+      const offset=circumference-(analysisPct/100)*circumference;
+      arc.style.strokeDashoffset=offset;
+    }
+    if(stageIdx<5&&analysisPct>=stagePcts[stageIdx]){
+      const item=document.getElementById('stage-'+stageIdx);
+      const status=document.getElementById('stage-status-'+stageIdx);
+      const icon=item.querySelector('.stage-icon');
+      item.className='stage-item done';
+      status.textContent='done';
+      icon.innerHTML='<i class="ti ti-check"></i>';
+      stageIdx++;
+      if(stageIdx<5){
+        const next=document.getElementById('stage-'+stageIdx);
+        const nextStatus=document.getElementById('stage-status-'+stageIdx);
+        const nextIcon=next.querySelector('.stage-icon');
+        next.className='stage-item active';
+        nextStatus.textContent='processing...';
+        nextIcon.innerHTML='<i class="ti ti-loader"></i>';
+      }
+    }
+  },60);
+}
+
+function renderResults(){
+  console.log('[DEBUG] 11. renderResults triggered. Accessing currentAnalysisResult:', currentAnalysisResult);
+  const result = currentAnalysisResult || MOCK_RESULT;
+  
+  const fname=localStorage.getItem('resumeai_current_file')||'frontend_developer_resume.pdf';
+  const fnEl=document.getElementById('result-filename');
+  if(fnEl)fnEl.textContent=fname;
+  
+  // MAPPING N8N SCHEMA TO UI
+  let parsedScore = 0;
+  if (result.atsScore !== undefined && result.atsScore !== null) parsedScore = parseInt(result.atsScore, 10);
+  else if (result.score !== undefined && result.score !== null) parsedScore = parseInt(result.score, 10);
+  else {
+    // Aggressive search for any key containing 'score'
+    for (const key in result) {
+      if (key.toLowerCase().includes('score')) {
+        parsedScore = parseInt(result[key], 10);
+        break;
+      }
+    }
+  }
+  
+  if (isNaN(parsedScore)) parsedScore = 0;
+  const score = parsedScore;
+  
+  const scoreEl=document.getElementById('score-display');
+  const ringFill=document.getElementById('score-ring-fill');
+  
+  const getProp = (obj, name) => {
+    if (!obj || typeof obj !== 'object') return undefined;
+    if (obj[name] !== undefined) return obj[name];
+    const lowerName = name.toLowerCase().replace(/\s/g, '');
+    for (const key in obj) {
+      if (key.toLowerCase().replace(/\s/g, '') === lowerName || key.toLowerCase().includes(lowerName)) {
+        return obj[key];
+      }
+    }
+    return undefined;
+  };
+
+  const parseArray = (val) => {
+    if (Array.isArray(val)) return val;
+    if (typeof val === 'string') {
+      try {
+        const parsed = JSON.parse(val.replace(/^[^{[]*/, '').replace(/[^}\]]*$/, ''));
+        if (Array.isArray(parsed)) return parsed;
+      } catch(e) {
+        return val.split(',').map(s => s.trim().replace(/^["']|["']$/g, '')).filter(Boolean);
+      }
+    }
+    return [];
+  };
+
+  const rawKeywords = parseArray(getProp(result, 'keywords'));
+  const rawIssues = parseArray(getProp(result, 'issues'));
+  const rawSugg = parseArray(getProp(result, 'suggestions'));
+  const rawRewrite = getProp(result, 'airewrite') || getProp(result, 'rewrite');
+  const rawSkills = parseArray(getProp(result, 'skills'));
+  const rawStrength = parseArray(getProp(result, 'strength'));
+
+  // Normalize keywords
+  let foundKws = [];
+  let missingKws = [];
+  if (Array.isArray(rawKeywords)) {
+    foundKws = rawKeywords;
+  } else if (rawKeywords && Array.isArray(rawKeywords.found)) {
+    foundKws = rawKeywords.found;
+    missingKws = rawKeywords.missing || [];
+  }
+  
+  if(scoreEl){
+    let curr=0;
+    const target=score;
+    const step=()=>{curr=Math.min(target,curr+2);scoreEl.textContent=curr;if(curr<target)requestAnimationFrame(step)};
+    setTimeout(step,300);
+  }
+  if(ringFill){
+    const r=55;const circ=2*Math.PI*r;
+    const offset=circ-(score/100)*circ;
+    const color=score>=80?'#7bc742':score>=60?'#FFD600':'#FF5252';
+    ringFill.style.stroke=color;
+    setTimeout(()=>{ringFill.style.strokeDashoffset=offset},100);
+  }
+  const barsEl=document.getElementById('section-bars');
+  if(barsEl){
+    barsEl.innerHTML='';
+    const mockSections = {Experience:88,Skills:80,Summary:52,Education:95,Impact:44};
+    const sections = result.sections || mockSections;
+    Object.entries(sections).forEach(([label,val],i)=>{
+      const color=val>=80?'green':val>=60?'yellow':'red';
+      const row=document.createElement('div');
+      row.className='metric-row';
+      row.innerHTML=`<div class="metric-header"><span>${label}</span><span class="metric-val mono">${val}</span></div><div class="metric-bar-bg"><div class="metric-bar-fill ${color}" style="width:0%" data-target="${val}"></div></div>`;
+      barsEl.appendChild(row);
+    });
+    setTimeout(()=>{
+      barsEl.querySelectorAll('.metric-bar-fill').forEach(bar=>{
+        bar.style.width=bar.dataset.target+'%';
+      });
+    },200);
+  }
+  const kwFound=document.getElementById('kw-found');
+  const kwMissing=document.getElementById('kw-missing');
+  const kwFoundCount=document.getElementById('kw-found-count');
+  const kwTotalCount=document.getElementById('kw-total-count');
+  
+  if(kwFound){
+    kwFound.innerHTML=foundKws.length > 0 ? foundKws.map(k=>`<span class="kw-pill found">${k}</span>`).join('') : '<span style="opacity:0.5">No keywords found in payload</span>';
+  }
+  if(kwMissing){
+    kwMissing.innerHTML=missingKws.length > 0 ? missingKws.map(k=>`<span class="kw-pill missing">${k}</span>`).join('') : '<span style="opacity:0.5">No missing keywords in payload</span>';
+  }
+  if(kwFoundCount)kwFoundCount.textContent=foundKws.length;
+  if(kwTotalCount)kwTotalCount.textContent=foundKws.length + missingKws.length;
+
+  // DYNAMIC TABS POPULATION
+  const tabIssues = document.getElementById('tab-issues');
+  const tabSugg = document.getElementById('tab-suggestions');
+  const tabRewrite = document.getElementById('tab-rewrite');
+
+  // Issues
+  if (tabIssues) {
+    if (Array.isArray(rawIssues) && rawIssues.length > 0) {
+      tabIssues.innerHTML = rawIssues.map(iss => {
+        const type = typeof iss === 'object' && iss.type ? iss.type : 'warning';
+        const title = typeof iss === 'object' && iss.title ? iss.title : 'Analysis Issue';
+        const desc = typeof iss === 'object' && iss.desc ? iss.desc : (typeof iss === 'string' ? iss : JSON.stringify(iss));
+        const icon = type === 'critical' ? 'alert-circle' : type === 'pass' ? 'circle-check' : 'info-circle';
+        return `
+          <div class="issue-item ${type}">
+            <div class="issue-icon ${type}"><i class="ti ti-${icon}"></i></div>
+            <div class="issue-content">
+              <div class="issue-title">${title}</div>
+              <div class="issue-desc">${desc}</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    } else {
+      tabIssues.innerHTML = '<div class="issue-item pass"><div class="issue-icon pass"><i class="ti ti-circle-check"></i></div><div class="issue-content"><div class="issue-title">Looking Good!</div><div class="issue-desc">No major issues were found in this resume.</div></div></div>';
+    }
+  }
+
+  // Suggestions
+  if (tabSugg) {
+    let suggestionsToRender = [];
+    if (Array.isArray(rawSugg)) suggestionsToRender = suggestionsToRender.concat(rawSugg);
+    if (Array.isArray(rawStrength)) suggestionsToRender = suggestionsToRender.concat(rawStrength.map(s => ({ priority: 'STRENGTH', desc: s })));
+    if (Array.isArray(rawSkills)) suggestionsToRender = suggestionsToRender.concat(rawSkills.map(s => ({ priority: 'SKILL', desc: s })));
+
+    if (suggestionsToRender.length > 0) {
+      tabSugg.innerHTML = suggestionsToRender.map((sugg, i) => {
+        const priority = typeof sugg === 'object' && sugg.priority ? sugg.priority : 'IMPROVEMENT';
+        const title = typeof sugg === 'object' && sugg.title ? sugg.title : 'Suggestion';
+        const desc = typeof sugg === 'object' && sugg.desc ? sugg.desc : (typeof sugg === 'string' ? sugg : JSON.stringify(sugg));
+        return `
+          <div class="sugg-item">
+            <div class="sugg-num">0${i+1} — ${priority}</div>
+            <div class="sugg-title">${title}</div>
+            <div class="sugg-desc">${desc}</div>
+          </div>
+        `;
+      }).join('');
+    } else {
+      tabSugg.innerHTML = '<p style="padding:40px;opacity:0.6">No specific suggestions available for this resume.</p>';
+    }
+  }
+
+  // AI Rewrite
+  if (tabRewrite) {
+    const rewrites = typeof rawRewrite === 'string' 
+      ? [{ title: 'AI-Rewritten Professional Summary', body: rawRewrite }]
+      : (Array.isArray(rawRewrite) ? rawRewrite : []);
+      
+    if (rewrites.length > 0) {
+      tabRewrite.innerHTML = rewrites.map((rw, i) => {
+        const title = typeof rw === 'object' && rw.title ? rw.title : 'AI Rewrite Suggestion';
+        const body = typeof rw === 'object' && rw.body ? rw.body : (typeof rw === 'string' ? rw : JSON.stringify(rw));
+        const domId = 'rewrite-body-' + i;
+        return `
+          <div class="rewrite-box">
+            <div class="rewrite-header"><i class="ti ti-sparkles"></i> ${title}</div>
+            <div class="rewrite-body" id="${domId}">${body}</div>
+            <div class="rewrite-actions">
+              <button class="rewrite-btn" onclick="copyText('${domId}')"><i class="ti ti-copy"></i> Copy</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    } else {
+      tabRewrite.innerHTML = '<p style="padding:40px;opacity:0.6">No AI rewrites were generated for this resume.</p>';
+    }
+  }
+}
+
+function switchTab(name,btn){
+  document.querySelectorAll('.results-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');
+  const panel=document.getElementById('tab-'+name);
+  if(panel)panel.classList.add('active');
+}
+
+function copyTips(){
+  const tips='1. Add quantifiable achievements to experience bullets\n2. Rewrite summary with target role keywords\n3. Add Docker and CI/CD to skills section\n4. Use STAR method for impact bullets';
+  navigator.clipboard.writeText(tips).then(()=>alert('Tips copied to clipboard!')).catch(()=>alert('Copied!'));
+}
+
+function copyText(id){
+  const el=document.getElementById(id);
+  if(el){
+    navigator.clipboard.writeText(el.textContent).then(()=>alert('Copied!')).catch(()=>alert('Copied!'));
+  }
+}
+
+const MOCK_HISTORY=[
+  {id:'1',name:'frontend_developer_resume.pdf',date:'28 May 2026',score:82,status:'ATS Ready'},
+  {id:'2',name:'fullstack_engineer.pdf',date:'20 May 2026',score:71,status:'Skills Match'},
+  {id:'3',name:'product_manager_resume.pdf',date:'14 May 2026',score:55,status:'Needs Work'},
+  {id:'4',name:'data_scientist_cv.pdf',date:'5 May 2026',score:91,status:'ATS Ready'},
+  {id:'5',name:'ux_designer_portfolio.pdf',date:'28 Apr 2026',score:67,status:'Good Match'},
+];
+
+function addToHistory(fname,score){
+  try{
+    let h=JSON.parse(localStorage.getItem('resumeai_analyses')||'[]');
+    const today=new Date().toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+    h.unshift({id:Date.now()+'',name:fname,date:today,score,status:score>=80?'ATS Ready':score>=60?'Good Match':'Needs Work'});
+    localStorage.setItem('resumeai_analyses',JSON.stringify(h));
+  }catch(e){}
+}
+
+function getHistory(){
+  try{
+    const h=JSON.parse(localStorage.getItem('resumeai_analyses')||'null');
+    return h||MOCK_HISTORY;
+  }catch(e){return MOCK_HISTORY}
+}
+
+let currentHistoryFilter='all';
+let currentHistorySearch='';
+
+function renderHistory(){
+  let items=getHistory();
+  if(currentHistorySearch){
+    const q=currentHistorySearch.toLowerCase();
+    items=items.filter(i=>i.name.toLowerCase().includes(q)||i.status.toLowerCase().includes(q));
+  }
+  if(currentHistoryFilter==='week'){
+    const cutoff=Date.now()-7*24*60*60*1000;
+    items=items.filter(i=>{
+      if(i.id&&!isNaN(i.id))return Number(i.id)>cutoff;
+      return true;
+    }).slice(0,3);
+  }
+  if(currentHistoryFilter==='month'){
+    const cutoff=Date.now()-30*24*60*60*1000;
+    items=items.filter(i=>{
+      if(i.id&&!isNaN(i.id))return Number(i.id)>cutoff;
+      return true;
+    });
+  }
+  const tbody=document.getElementById('history-tbody');
+  if(!tbody)return;
+  if(!items.length){
+    tbody.innerHTML='<tr><td colspan="5" style="text-align:center;padding:40px;color:var(--text3)"><i class="ti ti-database-off" style="font-size:32px;display:block;margin-bottom:12px"></i>No analyses found</td></tr>';
+    return;
+  }
+  tbody.innerHTML=items.map(row=>{
+    const badgeCls=row.score>=80?'green':row.score>=60?'yellow':'red';
+    return`<tr>
+      <td><div style="font-weight:600;font-size:14px">${row.name}</div></td>
+      <td style="color:var(--text3)">${row.date}</td>
+      <td><span class="score-badge ${badgeCls} mono">${row.score}</span></td>
+      <td style="color:var(--text2)">${row.status}</td>
+      <td><div class="table-actions"><button class="tbl-btn" onclick="navigate('result')"><i class="ti ti-eye"></i> View</button><button class="tbl-btn" onclick="alert('Downloading...')"><i class="ti ti-download"></i></button></div></td>
+    </tr>`;
+  }).join('');
+}
+
+function filterHistory(type,btn){
+  currentHistoryFilter=type;
+  document.querySelectorAll('.filter-tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  renderHistory();
+}
+
+function searchHistory(val){
+  currentHistorySearch=val;
+  renderHistory();
+}
+
+function selectEmoji(btn,emoji){
+  document.querySelectorAll('.emoji-btn').forEach(b=>b.classList.remove('selected'));
+  btn.classList.add('selected');
+  selectedEmoji=emoji;
+}
+
+function togglePill(btn){
+  btn.classList.toggle('selected');
+}
+
+function submitFeedback(){
+  document.getElementById('feedback-form-wrap').style.display='none';
+  document.getElementById('feedback-success-wrap').style.display='block';
+}
+
+function saveSettings(){
+  const name=document.getElementById('settings-fullname').value.trim();
+  const email=document.getElementById('settings-email-input').value.trim();
+  if(name&&email){
+    setUser({name,email});
+    updateUserUI();
+    alert('Settings saved!');
+  }
+}
+
+function toggleDropdown(id){
+  const all=document.querySelectorAll('.user-dropdown');
+  all.forEach(d=>{if(d.id!==id)d.classList.remove('open')});
+  const el=document.getElementById(id);
+  if(el)el.classList.toggle('open');
+}
+
+function closeAllDropdowns(){
+  document.querySelectorAll('.user-dropdown').forEach(d=>d.classList.remove('open'));
+}
+
+function toggleMobileSidebar(){
+  const sidebars=document.querySelectorAll('.sidebar');
+  const overlay=document.getElementById('sidebar-overlay');
+  mobileSidebarOpen=!mobileSidebarOpen;
+  sidebars.forEach(sb=>{
+    if(mobileSidebarOpen){sb.style.transform='translateX(0)';sb.style.zIndex='250'}
+    else{sb.style.transform='';sb.style.zIndex='200'}
+  });
+  if(overlay)overlay.classList.toggle('show',mobileSidebarOpen);
+  if(!mobileSidebarOpen){
+    sidebars.forEach(sb=>{sb.style.transform='';sb.style.zIndex=''});
+  }
+}
+
+document.addEventListener('click',e=>{
+  if(!e.target.closest('.topbar-avatar')&&!e.target.closest('.user-dropdown'))closeAllDropdowns();
+});
+
+let mx=0,my=0,rx=0,ry=0;
+const dot=document.getElementById('cursor-dot');
+const ring=document.getElementById('cursor-ring');
+
+document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY});
+document.addEventListener('mousedown',()=>{dot.style.transform='translate(-50%,-50%) scale(0.8)';ring.style.transform='translate(-50%,-50%) scale(0.8)'});
+document.addEventListener('mouseup',()=>{dot.style.transform='translate(-50%,-50%) scale(1)';ring.style.transform='translate(-50%,-50%) scale(1)'});
+
+function animCursor(){
+  dot.style.left=mx+'px';dot.style.top=my+'px';
+  rx+=(mx-rx)*.12;ry+=(my-ry)*.12;
+  ring.style.left=rx+'px';ring.style.top=ry+'px';
+  requestAnimationFrame(animCursor);
+}
+animCursor();
+
+function rebindCursor(){
+  document.querySelectorAll('a,button').forEach(el=>{
+    el.removeEventListener('mouseenter',onCursorEnter);
+    el.removeEventListener('mouseleave',onCursorLeave);
+    el.addEventListener('mouseenter',onCursorEnter);
+    el.addEventListener('mouseleave',onCursorLeave);
+  });
+}
+
+function onCursorEnter(){dot.style.width='14px';dot.style.height='14px';ring.style.width='52px';ring.style.height='52px';ring.style.background='rgba(255,214,0,0.06)'}
+function onCursorLeave(){dot.style.width='8px';dot.style.height='8px';ring.style.width='36px';ring.style.height='36px';ring.style.background='transparent'}
+
+if('ontouchstart' in window){dot.style.display='none';ring.style.display='none';document.body.style.cursor='auto'}
+
+function runSplash(){
+  const splash=document.getElementById('splash-page');
+  const outerRect=document.querySelector('.splash-svg .outer-rect');
+  const innerBolt=document.querySelector('.splash-svg .inner-bolt');
+  const title=document.getElementById('splash-title');
+  const tagline=document.getElementById('splash-tagline');
+  const dotsEl=document.getElementById('splash-dots');
+  const scanLine=document.getElementById('scan-line');
+
+  if(outerRect){
+    outerRect.style.animation='svgDraw 0.8s ease forwards 0.3s';
+  }
+  if(innerBolt){
+    innerBolt.style.animation='svgDraw 0.6s ease forwards 0.9s';
+  }
+  setTimeout(()=>{if(title){title.style.opacity='1';title.style.transform='translateY(0)'}},1100);
+  setTimeout(()=>{if(tagline)tagline.style.opacity='1'},1600);
+  setTimeout(()=>{
+    if(scanLine){
+      scanLine.style.animation='scanAnim 0.5s ease forwards';
+    }
+  },2000);
+  setTimeout(()=>{if(dotsEl)dotsEl.style.opacity='1'},2400);
+  setTimeout(()=>{if(splash)splash.classList.add('fade-out')},3200);
+  setTimeout(()=>{
+    if(splash)splash.style.display='none';
+    const u=getUser();
+    if(u){currentUser=u;navigate('upload')}
+    else{navigate('signup')}
+    rebindCursor();
+  },3700);
+}
+
+function init(){
+  rebindCursor();
+  runSplash();
+}
+
+init();
+</script>
+</body>
+</html>
